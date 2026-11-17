@@ -1,0 +1,2300 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>منصة اللوابد — نقل المعدات الثقيلة في السعودية</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap');
+    * {
+      font-family: 'IBM Plex Sans Arabic', sans-serif;
+      box-sizing: border-box;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(circle at top right, #FEF3C7 0%, #F8FAFC 45%, #E0F2FE 100%);
+      color: #0F172A;
+    }
+    .font-extrabold { font-weight: 800; }
+    .font-bold { font-weight: 700; }
+    .btn-amber-grad {
+      background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+      color: #0F172A;
+    }
+    .btn-emerald-grad {
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      color: #FFFFFF;
+    }
+    .btn-sky-grad {
+      background: linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%);
+      color: #FFFFFF;
+    }
+    .btn-dark-grad {
+      background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+      color: #FFFFFF;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .phone-frame {
+      background: #FFFFFF;
+      border-radius: 28px;
+      border: 3px solid #CBD5E1;
+      box-shadow: 0 20px 45px -15px rgba(15, 23, 42, 0.18);
+      overflow: hidden;
+    }
+    #route-leaflet-map {
+      height: 200px;
+      width: 100%;
+      border-radius: 16px;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-900">
+  <div id="error-boundary-banner" class="hidden bg-red-50 border-b border-red-300 text-red-900 px-4 py-2 text-xs font-bold text-center"></div>
+
+  <!-- Top Navigation & Action Header -->
+  <header class="bg-white/95 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 px-3 py-2.5 shadow-sm" dir="rtl">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5">
+        <div class="w-10 h-10 rounded-2xl btn-amber-grad flex items-center justify-center font-extrabold text-lg shadow-sm border border-amber-300">
+          🚛
+        </div>
+        <div>
+          <div class="flex items-center gap-1.5">
+            <h1 class="text-xs sm:text-sm font-extrabold text-slate-950">منصة اللوابد — نقل المعدات الثقيلة</h1>
+            <span id="header-pilot-badge" class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 text-[10px] font-extrabold">سقف السعي 250 ر.س</span>
+          </div>
+          <p class="text-[10px] font-bold text-slate-600">31 معدة ثقيلة • 4 لغات للسائقين • توثيق 4 زوايا وزراجين • متكامل 100%</p>
+        </div>
+      </div>
+
+      <!-- Main View Switcher -->
+      <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
+        <button id="view-btn-client" onclick="switchMainView('client')" class="px-3 py-1.5 rounded-xl font-extrabold bg-amber-400 text-slate-950 shadow-sm">
+          <i class="fa-solid fa-helmet-safety ml-1"></i>المقاول
+        </button>
+        <button id="view-btn-bids" onclick="switchMainView('bids')" class="px-3 py-1.5 rounded-xl font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
+          <i class="fa-solid fa-hand-holding-dollar ml-1"></i>العروض (<span id="nav-bids-count">3</span>)
+        </button>
+        <button id="view-btn-driver" onclick="switchMainView('driver')" class="px-3 py-1.5 rounded-xl font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
+          <i class="fa-solid fa-truck-ramp-box ml-1"></i>راعي اللوبد
+        </button>
+        <button id="view-btn-admin" onclick="switchMainView('admin')" class="px-3 py-1.5 rounded-xl font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
+          <i class="fa-solid fa-tower-observation ml-1"></i>مكتب الحركة
+        </button>
+        <button id="view-btn-dual" onclick="switchMainView('dual')" class="px-3 py-1.5 rounded-xl font-bold bg-slate-900 text-amber-300 hover:bg-slate-800">
+          <i class="fa-solid fa-table-columns ml-1"></i>عرض مزدوج حي
+        </button>
+      </div>
+
+      <!-- Fast Action Modals + Store Compliance Account Button -->
+      <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
+        <button onclick="openDriverOnboardingModal()" class="px-2.5 py-1.5 rounded-xl font-extrabold btn-emerald-grad shadow-sm">
+          <i class="fa-solid fa-plus ml-1"></i>انضم كراعي لوبد
+        </button>
+        <button onclick="openSuperShortcutsModal()" class="px-2.5 py-1.5 rounded-xl font-extrabold btn-sky-grad shadow-sm">
+          ⚡ الاختصارات
+        </button>
+        <button onclick="openBayanWaybillModal()" class="px-2.5 py-1.5 rounded-xl font-bold bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-300">
+          <i class="fa-solid fa-file-shield ml-1 text-sky-700"></i>سند النقل
+        </button>
+        <button onclick="openAccountComplianceModal()" title="حسابي والشروط وحذف الحساب" class="px-2.5 py-1.5 rounded-xl font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300">
+          <i class="fa-solid fa-user-shield ml-1 text-slate-700"></i>حسابي
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace Container -->
+  <main class="max-w-7xl mx-auto p-3 sm:p-5" dir="rtl">
+    <div id="simulator-grid-wrapper" class="max-w-2xl mx-auto transition-all duration-200">
+
+      <!-- ======================================================= -->
+      <!-- 1. CONTRACTOR (CLIENT) VIEW                             -->
+      <!-- ======================================================= -->
+      <section id="main-view-client" class="phone-frame p-3.5 sm:p-4 space-y-2.5">
+        <!-- Phone Status Header -->
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            <span class="text-xs font-extrabold text-slate-900">واجهة المقاول — التصفح السريع بدون تسجيل</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] font-bold text-slate-500">عدد اللوابد:</span>
+            <button type="button" onclick="setLowbedCountMultiplier(1)" id="mult-btn-1" class="px-2 py-0.5 rounded-lg text-[10px] font-extrabold bg-amber-400 text-slate-950">×1</button>
+            <button type="button" onclick="setLowbedCountMultiplier(2)" id="mult-btn-2" class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-700">×2</button>
+            <button type="button" onclick="setLowbedCountMultiplier(3)" id="mult-btn-3" class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-700">×3</button>
+          </div>
+        </div>
+
+        <!-- NEW FEATURE 5: Live 5-Step Order Status Tracker Bar -->
+        <div id="live-order-tracker-bar" class="bg-slate-50 border border-slate-200 rounded-2xl p-2.5 space-y-1.5"></div>
+
+        <!-- Unified Smart Search Bar -->
+        <div class="flex items-center gap-2 bg-slate-50 border-2 border-slate-200 focus-within:border-amber-500 rounded-2xl px-3 py-1.5 transition">
+          <i class="fa-solid fa-magnifying-glass text-amber-600 text-xs"></i>
+          <input
+            id="smart-unified-search"
+            type="text"
+            oninput="handleSmartUnifiedSearch(this.value)"
+            placeholder="ابحث عن معدة أو وزن (دوزر D8، بوكلين 320، شيول 966، كسارة)..."
+            class="flex-1 bg-transparent text-xs font-bold text-slate-900 focus:outline-none"
+          />
+          <button type="button" onclick="triggerVoiceSearchHint()" title="إملاء صوتي" class="w-7 h-7 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 flex items-center justify-center text-xs font-extrabold">
+            <i class="fa-solid fa-microphone"></i>
+          </button>
+        </div>
+
+        <!-- 1-Tap Shortcuts Bar (Repeat Last Order + Backhaul Deals + WhatsApp Card) -->
+        <div class="flex flex-wrap items-center justify-between gap-1.5 bg-gradient-to-l from-amber-50 via-white to-emerald-50 border border-amber-200 rounded-2xl px-3 py-1.5 text-[11px]">
+          <div class="flex items-center gap-1.5 font-extrabold text-slate-800">
+            <span class="px-2 py-0.5 rounded-lg bg-emerald-600 text-white text-[10px]">🔄 رجعة -30%</span>
+            <span id="active-backhaul-ticker" class="text-[11px] font-bold text-slate-700">متوفر لوبد 3 محاور راجع: ينبع ⬅ المدينة</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button type="button" onclick="repeatLastOrderOneTap()" class="px-2.5 py-1 rounded-xl bg-white border border-slate-300 font-extrabold text-slate-900 hover:bg-amber-50 shadow-sm">
+              ↻ كرر آخر طلب
+            </button>
+            <button type="button" onclick="copyOrderWhatsappCard()" class="px-2.5 py-1 rounded-xl bg-emerald-600 text-white font-extrabold hover:bg-emerald-700 shadow-sm">
+              <i class="fa-brands fa-whatsapp ml-1"></i>بطاقة واتساب
+            </button>
+          </div>
+        </div>
+
+        <!-- Single Horizontal Category Bar -->
+        <div id="catalog-categories-bar" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5"></div>
+
+        <!-- Full-Width Add Custom Equipment Banner -->
+        <button
+          type="button"
+          onclick="openAddCustomEquipmentModal()"
+          class="w-full rounded-2xl border-2 border-dashed border-amber-400 bg-gradient-to-l from-amber-50/90 via-white to-sky-50/90 hover:border-amber-500 transition p-2.5 flex items-center justify-between text-right shadow-sm"
+        >
+          <div class="flex items-center gap-2.5">
+            <div class="w-10 h-10 rounded-2xl btn-amber-grad flex items-center justify-center text-sm font-extrabold shrink-0 shadow-sm">
+              <i class="fa-solid fa-camera-retro"></i>
+            </div>
+            <div>
+              <div class="font-extrabold text-xs text-slate-950">+ أضف معدتك الخاصة أو صوّرها بالكاميرا</div>
+              <div class="text-[10px] font-bold text-slate-600">حدد الوزن ونوع المشي (جنزير / كفرات / ثابتة) ليطابقها النظام مع اللوبد المناسب فوراً</div>
+            </div>
+          </div>
+          <span class="px-2.5 py-1 rounded-xl bg-slate-900 text-amber-300 text-[10px] font-extrabold shrink-0">إضافة ⬅</span>
+        </button>
+
+        <!-- Clean 3x3 Visual Equipment Grid -->
+        <div id="equipment-catalog-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[340px] overflow-y-auto pr-0.5"></div>
+
+        <!-- Compact 2-Line Bottom Dock (with Loading Time Slot Quick Pill) -->
+        <div class="btn-dark-grad rounded-2xl p-3 space-y-2 shadow-lg border border-slate-700">
+          <!-- Line 1: Route Picker + Schedule Slot + Broken Winch + Backhaul -->
+          <div class="flex flex-wrap items-center justify-between gap-1.5 text-[11px]">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onclick="openEquipmentLocationModal()"
+                class="flex items-center gap-1.5 bg-slate-800/90 hover:bg-slate-700 px-2.5 py-1.5 rounded-xl font-extrabold text-amber-300 border border-slate-600"
+              >
+                <i class="fa-solid fa-map-location-dot"></i>
+                <span id="dock-route-summary">المدينة المنورة ⬅ ينبع • 220 كم</span>
+                <span id="dock-terrain-badge" class="px-1.5 py-0.5 rounded bg-slate-700 text-slate-200 text-[10px]">مزفلت</span>
+              </button>
+
+              <!-- NEW FEATURE 1: Quick Loading Schedule Cycling Button -->
+              <button
+                type="button"
+                onclick="cycleLoadingScheduleSlot()"
+                id="dock-schedule-btn"
+                title="اضغط لتغيير وقت التحميل"
+                class="px-2.5 py-1.5 rounded-xl font-extrabold bg-sky-950 text-sky-200 border border-sky-700 hover:bg-sky-900 transition"
+              >
+                🌅 بكرة الفجر 5:00 ص
+              </button>
+            </div>
+
+            <div class="flex items-center gap-1">
+              <button
+                type="button"
+                id="dock-broken-btn"
+                onclick="toggleBrokenEquipmentWinch()"
+                class="px-2 py-1.5 rounded-xl font-extrabold bg-slate-800 text-slate-200 border border-slate-700 transition"
+              >
+                🔧 عطلانة (ونش)
+              </button>
+              <button
+                type="button"
+                id="dock-backhaul-btn"
+                onclick="toggleQuickBackhaul()"
+                class="px-2 py-1.5 rounded-xl font-extrabold bg-slate-800 text-emerald-300 border border-slate-700 transition"
+              >
+                🔄 رجعة -30%
+              </button>
+            </div>
+          </div>
+
+          <!-- Line 2: Matched Lowbed + Total Freight + Request CTA -->
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800">
+            <div class="space-y-0.5">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span id="dock-matched-lowbed" class="text-[11px] font-extrabold text-sky-300">اللوبد المطابق: لوبد 3 محاور رقبة هيدروليك RGN</span>
+                <span id="dock-permit-badge" class="hidden px-2 py-0.5 rounded-md bg-rose-500/20 border border-rose-400 text-rose-200 text-[10px] font-extrabold">⚠️ يتطلب تصريح بروز</span>
+              </div>
+              <div class="flex items-baseline gap-2">
+                <span id="dock-total-price" class="text-lg font-extrabold text-amber-400">2,024 ر.س</span>
+                <span id="dock-commission-hint" class="text-[10px] font-bold text-slate-300">(عربون التعميد شامل الضريبة: 151 ر.س)</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onclick="openLazyPhoneSheet()"
+              class="px-4 py-2.5 rounded-2xl btn-amber-grad font-extrabold text-xs shadow-md hover:brightness-105 transition"
+            >
+              اطلب اللوبد الآن ⬅
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================= -->
+      <!-- 2. BIDS VIEW (عروض السائقين ومكاتب اللوابد)            -->
+      <!-- ======================================================= -->
+      <section id="main-view-bids" class="hidden phone-frame p-3.5 sm:p-4 space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-200 pb-2.5">
+          <div>
+            <h2 class="font-extrabold text-sm text-slate-950">عروض اللوابد المطابقة للطلب</h2>
+            <p id="bids-order-context" class="text-[11px] font-bold text-slate-600">طلب #LB-8841 • بانتظار اختيار العرض وتعميد اللوبد</p>
+          </div>
+          <button onclick="switchMainView('client')" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-extrabold">
+            ⬅ تعديل المعدة
+          </button>
+        </div>
+        <div id="client-driver-bids-list" class="space-y-2.5"></div>
+      </section>
+
+      <!-- ======================================================= -->
+      <!-- 3. DRIVER VIEW (شاشة راعي اللوبد باللغات الـ 4)          -->
+      <!-- ======================================================= -->
+      <section id="main-view-driver" class="hidden phone-frame p-3.5 sm:p-4 space-y-3">
+        <div id="driver-mission-container" class="space-y-3"></div>
+      </section>
+
+      <!-- ======================================================= -->
+      <!-- 4. ADMIN & DISPATCH ROOM (غرفة التحكم ومكتب الحركة)     -->
+      <!-- ======================================================= -->
+      <section id="main-view-admin" class="hidden phone-frame p-3.5 sm:p-4 space-y-3">
+        <div id="admin-dashboard-container" class="space-y-3"></div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ========================================================= -->
+  <!-- MODAL 1: LOCATION & FIELD SITES DIRECTORY + INTERACTIVE MAP -->
+  <!-- ========================================================= -->
+  <div id="equipment-location-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-3 sm:p-4">
+    <div class="bg-white w-full max-w-2xl rounded-3xl p-4 sm:p-5 shadow-2xl border-2 border-amber-400 max-h-[92vh] overflow-y-auto space-y-3 text-xs" dir="rtl">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl btn-amber-grad flex items-center justify-center font-extrabold">📍</div>
+          <div>
+            <h3 class="font-extrabold text-sm text-slate-950">تحديد المسار ودليل المدن والهجر والكسارات والمشاريع</h3>
+            <p class="text-[11px] font-bold text-slate-600">اختر من القائمة الذكية بنقرة واحدة أو الصق رابط موقع واتساب</p>
+          </div>
+        </div>
+        <button onclick="closeEquipmentLocationModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-red-100 text-slate-700 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Interactive Map Container -->
+      <div id="route-leaflet-map" class="border border-slate-300 shadow-inner bg-slate-100"></div>
+
+      <!-- Origin / Destination Inputs -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div>
+          <label class="font-extrabold text-slate-800 block mb-1">نقطة التحميل (من):</label>
+          <input id="loc-origin-input" type="text" oninput="updateLocationRouteMetrics()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900" />
+        </div>
+        <div>
+          <label class="font-extrabold text-slate-800 block mb-1">نقطة التنزيل (إلى):</label>
+          <input id="loc-dest-input" type="text" oninput="updateLocationRouteMetrics()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900" />
+        </div>
+      </div>
+
+      <!-- WhatsApp Location Link Parser -->
+      <div class="flex items-center gap-2">
+        <input id="whatsapp-loc-link-input" type="text" placeholder="الصق إحداثيات GPS أو رابط لوكيشن واتساب (مثال: 24.0895, 38.0618)" class="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900" />
+        <button type="button" onclick="parseWhatsappLocationLink()" class="px-3 py-2 rounded-xl btn-emerald-grad font-extrabold shrink-0">
+          <i class="fa-brands fa-whatsapp ml-1"></i>التقاط الموقع
+        </button>
+      </div>
+
+      <!-- Directory of Cities, Hijrahs, Quarries, and Projects -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
+          <span class="font-extrabold text-slate-800">دليل المواقع الميدانية المعروفة (نقرة واحدة):</span>
+          <span class="text-[10px] font-bold text-slate-500">يضبط المسافة والأرضية تلقائياً</span>
+        </div>
+        <div class="flex flex-wrap gap-1.5">
+          <button type="button" id="site-filter-all" onclick="setFieldSiteFilter('all')" class="px-2.5 py-1 rounded-lg bg-slate-900 text-white font-extrabold text-[11px]">الكل (10)</button>
+          <button type="button" id="site-filter-city" onclick="setFieldSiteFilter('city')" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 font-bold text-[11px]">🏙️ مدن وصناعيات</button>
+          <button type="button" id="site-filter-hijrah" onclick="setFieldSiteFilter('hijrah')" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 font-bold text-[11px]">🏘️ هجر ومراكز</button>
+          <button type="button" id="site-filter-quarry" onclick="setFieldSiteFilter('quarry')" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 font-bold text-[11px]">⛰️ كسارات</button>
+          <button type="button" id="site-filter-project" onclick="setFieldSiteFilter('project')" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 font-bold text-[11px]">🏗️ مشاريع كبرى</button>
+        </div>
+        <div id="field-sites-quick-list" class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-40 overflow-y-auto p-0.5"></div>
+      </div>
+
+      <!-- Site Terrain Selector -->
+      <div class="space-y-1">
+        <div class="font-extrabold text-slate-800">طبيعة أرضية الموقع عند التحميل/التنزيل:</div>
+        <div class="grid grid-cols-3 gap-2">
+          <button type="button" id="terrain-btn-paved" onclick="setSiteTerrain('paved')" class="p-2 rounded-xl border-2 border-amber-500 bg-amber-50 font-extrabold text-slate-950">🛣️ مزفلت (قياسي)</button>
+          <button type="button" id="terrain-btn-sand" onclick="setSiteTerrain('sand')" class="p-2 rounded-xl border border-slate-300 bg-white font-bold text-slate-800">🏜️ ردمية ممهدة</button>
+          <button type="button" id="terrain-btn-rough" onclick="setSiteTerrain('rough')" class="p-2 rounded-xl border border-slate-300 bg-white font-bold text-slate-800">⛰️ تغريز / وعر (+200 ر.س)</button>
+        </div>
+      </div>
+
+      <!-- Distance Slider & Confirm -->
+      <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-slate-700">تعديل المسافة بالكيلومتر يدوياً:</span>
+          <b id="modal-distance-val" class="text-sm font-extrabold text-slate-950">220 كم</b>
+        </div>
+        <input id="modal-distance-slider" type="range" min="15" max="1100" step="5" value="220" oninput="handleDistanceSliderChange(this.value)" class="w-full accent-amber-500" />
+        <div class="flex justify-end pt-1">
+          <button type="button" onclick="closeEquipmentLocationModal()" class="px-5 py-2.5 rounded-xl btn-amber-grad font-extrabold shadow-sm">
+            اعتماد المسار وحساب النولون ✓
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL 2: SUPER SHORTCUTS (الاختصارات الفائقة للأطراف الـ 5) -->
+  <!-- ========================================================= -->
+  <div id="super-shortcuts-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-3 sm:p-4">
+    <div class="bg-white w-full max-w-xl rounded-3xl p-4 sm:p-5 shadow-2xl border-2 border-sky-400 max-h-[92vh] overflow-y-auto space-y-3 text-xs" dir="rtl">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl btn-sky-grad flex items-center justify-center text-white font-extrabold">⚡</div>
+          <div>
+            <h3 class="font-extrabold text-sm text-slate-950">غرفة الاختصارات الفائقة (واتساب • تيليجرام • نقرة واحدة)</h3>
+            <p class="text-[11px] font-bold text-slate-600">اختصارات عملية للأطراف الـ 5 لتنفيذ الطلبات والردّات والتسويق في ثوانٍ</p>
+          </div>
+        </div>
+        <button onclick="closeSuperShortcutsModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-red-100 text-slate-700 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div id="super-shortcuts-body" class="space-y-3 text-xs"></div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL 3: ORDER CONFIRMATION + SCHEDULE + SITE READINESS   -->
+  <!-- ========================================================= -->
+  <div id="lazy-phone-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-3 sm:p-4">
+    <div class="bg-white w-full max-w-lg rounded-3xl p-4 sm:p-5 shadow-2xl border-2 border-amber-400 max-h-[92vh] overflow-y-auto space-y-3 text-xs" dir="rtl">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+        <div>
+          <h3 class="font-extrabold text-sm text-slate-950">تأكيد طلب اللوبد وجاهزية التحميل (بدون كلمة مرور)</h3>
+          <p class="text-[11px] font-bold text-slate-500">حدد موعد التحميل وجوال سائق المعدة ليصلك اللوبد جاهزاً</p>
+        </div>
+        <button onclick="closeLazyPhoneSheet()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- Order Summary Box -->
+      <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-1">
+        <div>المعدة المختارة: <b id="modal-order-equip" class="text-slate-950">—</b></div>
+        <div>اللوبد المطابق: <b id="modal-order-lowbed" class="text-sky-900">—</b></div>
+        <div>المسار: <b id="modal-order-route" class="text-slate-800">—</b></div>
+        <div>النولون التقديري: <b id="modal-order-price" class="text-emerald-800 text-sm">—</b></div>
+      </div>
+
+      <!-- NEW FEATURE 1: Loading Time & Schedule Selector + Traffic Ban Warning -->
+      <div class="space-y-1.5">
+        <label class="font-extrabold text-slate-900 block">1. موعد تحميل المعدة المفضل:</label>
+        <div class="grid grid-cols-3 gap-1.5">
+          <button type="button" id="sched-btn-dawn" onclick="setLoadingScheduleSlot('dawn')" class="p-2 rounded-xl border-2 border-amber-500 bg-amber-50 font-extrabold text-slate-950 text-[11px]">🌅 بكرة الفجر (5:00 ص)</button>
+          <button type="button" id="sched-btn-now" onclick="setLoadingScheduleSlot('now')" class="p-2 rounded-xl border border-slate-300 bg-white font-bold text-slate-800 text-[11px]">⚡ الآن (فوري)</button>
+          <button type="button" id="sched-btn-afternoon" onclick="setLoadingScheduleSlot('afternoon')" class="p-2 rounded-xl border border-slate-300 bg-white font-bold text-slate-800 text-[11px]">🌇 بعد العصر (4:00 م)</button>
+        </div>
+        <div id="schedule-traffic-ban-note" class="p-2 rounded-xl bg-sky-50 border border-sky-200 text-sky-950 font-bold text-[10px]">
+          ✅ موعد مثالي للمشاريع: يتفادى أوقات منع دخول الشاحنات للمدن (الذروة الصباحية 6:30–9:00 ص) وتصل المعدة قبل دوام العمال.
+        </div>
+      </div>
+
+      <!-- NEW FEATURE 2: Site Readiness (Operator Key Phone + Security Gate Permit) -->
+      <div class="p-3 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-2">
+        <div class="font-extrabold text-slate-900">2. جاهزية الموقع عند وصول اللوبد (لمنع الانتظار):</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label class="font-bold text-slate-700 block mb-1 text-[11px]">جوال المقاول / طالب اللوبد:</label>
+            <input id="client-phone-input" type="tel" value="0501234567" placeholder="05XXXXXXXX" class="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 font-bold text-slate-900" />
+          </div>
+          <div>
+            <label class="font-bold text-slate-700 block mb-1 text-[11px]">🔑 جوال سائق المعدة / الحارس (المفتاح):</label>
+            <input id="operator-phone-input" type="tel" value="0559876543" placeholder="05XXXXXXXX" class="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 font-bold text-slate-900" />
+          </div>
+        </div>
+        <div>
+          <span class="font-bold text-slate-700 block mb-1 text-[11px]">🚧 هل يحتاج الموقع تصريح دخول بوابة أمني (أرامكو / ينبع الصناعية / نيوم)؟</span>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" id="gate-btn-open" onclick="setSiteGatePermit(false)" class="p-2 rounded-xl border-2 border-emerald-600 bg-white font-extrabold text-slate-950 text-[11px]">🟢 موقع مفتوح (دخول مباشر)</button>
+            <button type="button" id="gate-btn-permit" onclick="setSiteGatePermit(true)" class="p-2 rounded-xl border border-slate-300 bg-white font-bold text-slate-800 text-[11px]">🪪 يتطلب تصريح بوابة أمني</button>
+          </div>
+        </div>
+      </div>
+
+      <button onclick="confirmOrderAndGoToBids()" class="w-full btn-amber-grad py-3 rounded-2xl font-extrabold text-xs shadow-md">
+        إرسال الطلب لأهل اللوابد واستعراض العروض ⬅
+      </button>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL 4: ADD CUSTOM EQUIPMENT                             -->
+  <!-- ========================================================= -->
+  <div id="custom-equip-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-3 sm:p-4">
+    <div class="bg-white w-full max-w-lg rounded-3xl p-4 sm:p-5 shadow-2xl border-2 border-sky-400 space-y-3 text-xs" dir="rtl">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+        <h3 class="font-extrabold text-sm text-slate-950">+ إضافة معدة خاصة أو تصويرها بالكاميرا</h3>
+        <button onclick="closeAddCustomEquipmentModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+        <img id="custom-equip-thumb-preview" src="https://placehold.co/160x120/FEF3C7/0F172A?text=CAT+36T" alt="معاينة" class="w-20 h-16 rounded-xl object-cover border border-amber-400" />
+        <div class="flex-1 space-y-1.5">
+          <input id="custom-equip-name" oninput="updateCustomEquipPreview()" type="text" placeholder="اسم المعدة (مثال: بوكلين دوسان 340)" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 font-bold text-slate-900" />
+          <div class="flex flex-wrap gap-1.5">
+            <label class="cursor-pointer bg-sky-100 hover:bg-sky-200 text-sky-950 px-2.5 py-1 rounded-lg font-extrabold">
+              <i class="fa-solid fa-camera ml-1"></i>رفع صورة
+              <input type="file" accept="image/*" onchange="handleCustomEquipPhotoUpload(event)" class="hidden" />
+            </label>
+            <button type="button" onclick="simulateAiCameraEquipmentScan()" class="bg-amber-100 hover:bg-amber-200 text-slate-950 px-2.5 py-1 rounded-lg font-extrabold">
+              معاينة ذكية 📸
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="space-y-1">
+        <div class="flex justify-between font-extrabold text-slate-900">
+          <span>الوزن التقريبي للمعدة:</span>
+          <span id="custom-weight-display" class="text-sky-900">36 طن</span>
+        </div>
+        <input id="custom-weight-slider" oninput="updateCustomEquipPreview()" type="range" min="5" max="80" step="1" value="36" class="w-full accent-amber-500" />
+        <div class="flex gap-1.5 pt-1">
+          <button type="button" onclick="setQuickCustomWeight(20)" class="px-2 py-1 rounded-lg bg-slate-100 font-bold">20 طن (محورين)</button>
+          <button type="button" onclick="setQuickCustomWeight(38)" class="px-2 py-1 rounded-lg bg-slate-100 font-bold">38 طن (3 محاور RGN)</button>
+          <button type="button" onclick="setQuickCustomWeight(60)" class="px-2 py-1 rounded-lg bg-slate-100 font-bold">60 طن (4 محاور ثقيل)</button>
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-2">
+        <button type="button" id="cust-move-tracked" onclick="setCustomMoveType('tracked')" class="p-2 rounded-xl border-2 border-amber-500 bg-amber-50 font-extrabold text-slate-950">⛓️ جنزير حديد</button>
+        <button type="button" id="cust-move-wheeled" onclick="setCustomMoveType('wheeled')" class="p-2 rounded-xl border border-slate-300 bg-white font-bold text-slate-800">🛞 كفرات</button>
+        <button type="button" id="cust-move-static" onclick="setCustomMoveType('static')" class="p-2 rounded-xl border border-slate-300 bg-white font-bold text-slate-800">🏗️ ثابتة (ونش)</button>
+      </div>
+      <div id="custom-engineering-preview" class="p-2.5 rounded-xl bg-emerald-50 border border-emerald-300 font-extrabold text-emerald-950">
+        اللوبد المطابق: لوبد 3 محاور رقبة مفصولة هيدروليك (حتى 55 طن)
+      </div>
+      <button onclick="saveAndSelectCustomEquipment()" class="w-full btn-emerald-grad py-3 rounded-2xl font-extrabold shadow-md">
+        اعتماد وإضافة المعدة للقائمة ✓
+      </button>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL 5: FLEXIBLE WAYBILL & ZATCA INVOICE                 -->
+  <!-- ========================================================= -->
+  <div id="bayan-waybill-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-3 sm:p-4">
+    <div class="bg-white w-full max-w-2xl rounded-3xl p-4 sm:p-5 shadow-2xl border-2 border-sky-400 max-h-[92vh] overflow-y-auto space-y-3 text-xs" dir="rtl">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+        <h3 class="font-extrabold text-sm text-slate-950">سند النقل والتسليم المرن والفاتورة الضريبية (ZATCA)</h3>
+        <button onclick="closeBayanWaybillModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="bayan-waybill-body" class="space-y-3"></div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL 6: PAYMENT & DEPOSIT SETTLEMENT                     -->
+  <!-- ========================================================= -->
+  <div id="payment-settlement-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-3 sm:p-4">
+    <div class="bg-white w-full max-w-lg rounded-3xl p-4 sm:p-5 shadow-2xl border-2 border-amber-400 space-y-3 text-xs" dir="rtl">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+        <div>
+          <h3 class="font-extrabold text-sm text-slate-950">تعميد اللوبد وتسوية النولون</h3>
+          <p id="pay-modal-driver-name" class="text-[11px] font-bold text-slate-600"></p>
+        </div>
+        <button onclick="closePaymentSettlementModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="grid grid-cols-2 gap-1.5 bg-slate-100 p-1 rounded-2xl">
+        <button onclick="selectSettlementMethod('deposit')" id="pay-tab-deposit" class="py-2 px-2 rounded-xl font-extrabold bg-white text-slate-950 shadow-sm">عربون التعميد (الأيسر للأفراد)</button>
+        <button onclick="selectSettlementMethod('escrow')" id="pay-tab-escrow" class="py-2 px-2 rounded-xl font-bold text-slate-700">ضمان موحد للشركات (Escrow)</button>
+      </div>
+      <div id="pay-mode-deposit-box" class="bg-emerald-50 border border-emerald-300 rounded-2xl p-3 space-y-1.5">
+        <div class="flex justify-between"><span>عربون التعميد الفوري (السعي + الضريبة):</span><b id="pay-deposit-now-val" class="text-emerald-900 text-sm"></b></div>
+        <div class="flex justify-between"><span>صافي النولون المتبقي للسائق عند التربيط:</span><b id="pay-driver-rem-val" class="text-slate-950"></b></div>
+        <div class="text-[11px] text-slate-700">آيبان السائق الموثق: <span id="pay-driver-iban-text" class="font-mono font-bold"></span></div>
+      </div>
+      <div id="pay-mode-escrow-box" class="hidden bg-sky-50 border border-sky-300 rounded-2xl p-3 space-y-1.5">
+        <div class="flex justify-between"><span>إجمالي مبلغ الضمان الموحد:</span><b id="pay-full-escrow-val" class="text-sky-950 text-sm"></b></div>
+        <div class="text-[11px] text-slate-700">آيبان الضمان الافتراضي: <span id="pay-virtual-iban-text" class="font-mono font-bold"></span></div>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="setDriverTransferTiming('on_lashing')" id="timing-btn-lashing" class="p-2 rounded-xl border-2 border-amber-500 bg-white font-extrabold text-slate-950 text-[11px] text-right">تحويل كامل عند تربيط الزراجين</button>
+        <button onclick="setDriverTransferTiming('split_50_50')" id="timing-btn-split" class="p-2 rounded-xl border border-slate-300 bg-white/70 font-bold text-slate-800 text-[11px] text-right">50% عند التربيط / 50% قبل التنزيل</button>
+      </div>
+      <button onclick="finalizeCommissionAndConfirmDriver()" class="w-full btn-emerald-grad py-3 rounded-2xl font-extrabold shadow-md">
+        <span id="pay-confirm-main-btn-text">تأكيد التعميد</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL 7: 60-SECOND DRIVER ONBOARDING (4 LANGUAGES)        -->
+  <!-- ========================================================= -->
+  <div id="driver-onboarding-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-3 sm:p-4">
+    <div class="bg-white w-full max-w-lg rounded-3xl p-4 sm:p-5 shadow-2xl border-2 border-emerald-400 space-y-3 text-xs" dir="rtl">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+        <div>
+          <h3 class="font-extrabold text-sm text-slate-950">انضم كراعي لوبد / سائق (في 60 ثانية بدون شحن محفظة)</h3>
+          <p class="text-[11px] font-bold text-emerald-700">مكافأة التأسيس: 0% سعي على أول 5 ردّات + وسام ردّ سريع ⚡</p>
+        </div>
+        <button onclick="closeDriverOnboardingModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="flex flex-wrap gap-1.5">
+        <button type="button" id="onb-lang-ar" onclick="selectOnboardingLang('ar')" class="px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-amber-400 text-slate-950">🇸🇦 عربي</button>
+        <button type="button" id="onb-lang-ur" onclick="selectOnboardingLang('ur')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white border border-slate-300">🇵🇰 اردو</button>
+        <button type="button" id="onb-lang-hi" onclick="selectOnboardingLang('hi')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white border border-slate-300">🇮🇳 हिन्दी</button>
+        <button type="button" id="onb-lang-en" onclick="selectOnboardingLang('en')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white border border-slate-300">🇬🇧 EN</button>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <input id="onboard-driver-name" type="text" placeholder="اسم السائق أو مكتب اللوبد" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold" />
+        <input id="onboard-driver-phone" type="tel" value="0551234567" placeholder="05XXXXXXXX" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold" />
+        <input id="onboard-plate-no" type="text" value="أ ب ج 4820" placeholder="رقم اللوحة" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold" />
+        <input id="onboard-iban-input" type="text" value="SA88 8000 0000 6080 1199 4410" placeholder="رقم الآيبان SA..." class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold" />
+      </div>
+      <div class="grid grid-cols-3 gap-2">
+        <button type="button" id="onb-type-2axles" onclick="selectOnboardingLowbedType('2axles')" class="p-2.5 rounded-2xl border border-slate-300 bg-white text-center space-y-1 font-bold">🚛 محورين عادي</button>
+        <button type="button" id="onb-type-3axles_rgn" onclick="selectOnboardingLowbedType('3axles_rgn')" class="p-2.5 rounded-2xl border-2 border-amber-500 bg-amber-50 text-center space-y-1 font-extrabold">🚜 3 محاور RGN</button>
+        <button type="button" id="onb-type-4axles_heavy" onclick="selectOnboardingLowbedType('4axles_heavy')" class="p-2.5 rounded-2xl border border-slate-300 bg-white text-center space-y-1 font-bold">🏗️ 4 محاور ثقيل</button>
+      </div>
+      <div class="flex flex-wrap gap-1.5">
+        <button type="button" id="gear-btn-chains" onclick="toggleOnboardingGear('chains')" class="px-2.5 py-1 rounded-xl border border-emerald-500 bg-emerald-50 text-emerald-950 text-[11px] font-extrabold">🔗 سلاسل وزراجين ✓</button>
+        <button type="button" id="gear-btn-extensions" onclick="toggleOnboardingGear('extensions')" class="px-2.5 py-1 rounded-xl border border-slate-300 bg-white text-slate-800 text-[11px] font-bold">↔️ توسيعات جانبية</button>
+        <button type="button" id="gear-btn-winch" onclick="toggleOnboardingGear('winch')" class="px-2.5 py-1 rounded-xl border border-slate-300 bg-white text-slate-800 text-[11px] font-bold">🪝 ونش سحب</button>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <button type="button" id="onb-mode-ready" onclick="selectOnboardingMode('ready')" class="p-2 rounded-xl border-2 border-emerald-600 bg-white font-extrabold text-slate-950 text-[11px]">🟢 جاهز لاستقبال الردّات</button>
+        <button type="button" id="onb-mode-backhaul" onclick="selectOnboardingMode('backhaul')" class="p-2 rounded-xl border border-slate-300 bg-white/70 font-bold text-slate-800 text-[11px]">🔄 راجع فاضي الآن (-30%)</button>
+      </div>
+      <button onclick="completeDriverQuickOnboarding()" class="w-full btn-emerald-grad py-3 rounded-2xl font-extrabold shadow-md">
+        تفعيل اللوبد الآن (0% سعي لأول 5 ردّات) ✓
+      </button>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL 8: ACCOUNT, TERMS & APPLE STORE COMPLIANCE (5.1.1v) -->
+  <!-- ========================================================= -->
+  <div id="account-compliance-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-3 sm:p-4">
+    <div class="bg-white w-full max-w-md rounded-3xl p-4 sm:p-5 shadow-2xl border-2 border-slate-300 space-y-3 text-xs" dir="rtl">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-slate-900 text-amber-300 flex items-center justify-center font-extrabold">
+            <i class="fa-solid fa-user-shield"></i>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-sm text-slate-950">حسابي والشروط وسياسة المتاجر</h3>
+            <p class="text-[10px] font-bold text-slate-500">متوافق مع اشتراطات Apple App Store (5.1.1v) و Google Play</p>
+          </div>
+        </div>
+        <button onclick="closeAccountComplianceModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+        <div>رقم الجوال النشط: <b id="acc-modal-phone" class="font-mono text-slate-950">0501234567</b></div>
+        <div>وضع التصفح: <b class="text-emerald-700">تصفح مفتوح + توثيق سريع عند الطلب</b></div>
+        <div>حساب مراجعة المتاجر الجاهز: <span class="font-mono font-bold text-sky-900">0500000000 / OTP: 4829</span></div>
+      </div>
+
+      <div class="p-3 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-1 text-[11px]">
+        <div class="font-extrabold text-slate-900">الضوابط الميدانية المعتمدة:</div>
+        <ul class="list-disc pr-4 space-y-1 font-bold text-slate-700">
+          <li>أول ساعتين للتحميل/التنزيل مجانية، وبعدها يُحتسب 100 ر.س/ساعة تأخير موقع.</li>
+          <li>يلتزم السائق بتصوير الزوايا الأربع وفحص السلاسل والزراجين قبل التحرك.</li>
+          <li>تُحتسب ضريبة القيمة المضافة (15%) على سعي المنصة فقط (نموذج الوكيل المفصح).</li>
+        </ul>
+      </div>
+
+      <div class="pt-2 border-t border-slate-200 flex items-center justify-between gap-2">
+        <button type="button" onclick="triggerDeleteAccountFlow()" class="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 font-extrabold text-[11px]">
+          <i class="fa-solid fa-trash-can ml-1"></i>حذف الحساب وبياناتي نهائياً
+        </button>
+        <button type="button" onclick="closeAccountComplianceModal()" class="px-4 py-2 rounded-xl bg-slate-900 text-white font-extrabold text-[11px]">
+          إغلاق
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- TOAST NOTIFICATION                                        -->
+  <!-- ========================================================= -->
+  <div id="app-toast" class="fixed bottom-5 left-5 z-50 hidden max-w-sm bg-white border-2 border-amber-400 text-slate-900 px-4 py-3 rounded-2xl shadow-2xl items-center gap-3">
+    <div class="w-9 h-9 rounded-xl btn-amber-grad flex items-center justify-center shrink-0 font-extrabold">
+      <i class="fa-solid fa-bell"></i>
+    </div>
+    <div>
+      <div id="toast-title" class="font-extrabold text-xs text-slate-950">إشعار المنصة</div>
+      <div id="toast-desc" class="text-[11px] font-bold text-slate-700 mt-0.5">تم التحديث بنجاح</div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MASTER JAVASCRIPT ENGINE                                  -->
+  <!-- ========================================================= -->
+  <script>
+    // 1. 4-Language Driver Translation Dictionary (Arabic, Urdu, Hindi, English — No Bengali)
+    const DRIVER_I18N = {
+      ar: {
+        dir: 'rtl',
+        headerTitle: 'شاشة راعي اللوبد الميدانية (بدون كيبورد)',
+        netPayoutLabel: 'صافي النولون المستحق لك عند التربيط:',
+        otpLabel: 'رمز التسليم OTP:',
+        bidAccept: 'موافق على النولون ✓',
+        bidPlus150: '+150 ر.س (مسافة)',
+        bidPlus300: '+300 ر.س (وعورة/بيات)',
+        step1Title: '1. تصوير الزوايا الأربع قبل التحميل',
+        step2Title: '2. فحص تربيط السلاسل والزراجين',
+        quickComplete: 'إكمال التوثيق سريعاً ⚡',
+        corners: ['أمام يمين', 'أمام يسار', 'خلف يمين', 'خلف يسار'],
+        lashing: ['سلسلة وزرجينة أمام يمين', 'سلسلة وزرجينة أمام يسار', 'سلسلة خلفية وتأمين البوم', 'فرش أخشاب وتحجير الكفرات'],
+        quickMsgTitle: 'رسائل حالة فورية للمقاول بضغطة زر:',
+        quickMsgs: ['📍 واقف عند البوابة', '🚜 جاري تطليع المعدة', '🔗 ربطنا الزراجين وحركنا', '🏁 وصلنا موقع التنزيل'],
+        startReady: '✓ جاهز للتحرك — بدء الرحلة وتفعيل تتبع GPS',
+        startLocked: '🔒 أكمل تصوير الزوايا (4/4) وتربيط الزراجين (4/4) لفتح الحركة',
+        demurrageTitle: '⏳ عداد الانتظار المجاني بالموقع (ساعتان):',
+        demurrageRule: 'أول ساعتين مجاناً • بعدها +100 ر.س لكل ساعة تأخير بسبب الموقع',
+        demurrageStartBtn: 'بدء عداد الانتظار عند البوابة',
+        step3ClosureTitle: '3. تأكيد التنزيل وإدخال كود التسليم (OTP) والتقييم',
+        otpConfirmBtn: 'تأكيد كود الاستلام (4829) وإغلاق الردّة 🏁',
+        tripCompletedBadge: '🎉 اكتملت الردّة بنجاح وتم تحرير النولون وتقييم المقاول!'
+      },
+      ur: {
+        dir: 'rtl',
+        headerTitle: 'لو بڈ ڈرائیور اسکرین (بغیر کی بورڈ)',
+        netPayoutLabel: 'لوڈنگ پر آپ کا خالص کرایہ (نولون):',
+        otpLabel: 'ڈلیوری کوڈ OTP:',
+        bidAccept: 'کرایہ منظور ہے ✓',
+        bidPlus150: '+150 ریال (فاصلہ)',
+        bidPlus300: '+300 ریال (کچا راستہ)',
+        step1Title: '1. لوڈنگ سے پہلے مشین کے 4 کونوں کی تصاویر',
+        step2Title: '2. زنجیر اور بائنڈر (زراجين) چیک لسٹ',
+        quickComplete: 'فوری مکمل کریں ⚡',
+        corners: ['آگے دائیں', 'آگے بائیں', 'پیچھے دائیں', 'پیچھے بائیں'],
+        lashing: ['آگے دائیں زنجیر لاک', 'آگے بائیں زنجیر لاک', 'پیچھے زنجیر اور بوم لاک', 'لکڑی کے گٹکے اور ویل اسٹاپر'],
+        quickMsgTitle: 'ٹھیکیدار کو فوری پیغام بھیجیں (ایک کلک):',
+        quickMsgs: ['📍 گیٹ پر موجود ہوں', '🚜 مشین لوڈ ہو رہی ہے', '🔗 زنجیر باندھ کر نکل گئے', '🏁 سائٹ پر پہنچ گئے'],
+        startReady: '✓ روانگی کے لیے تیار — GPS ٹریکنگ شروع کریں',
+        startLocked: '🔒 روانگی کے لیے 4 تصاویر (4/4) اور 4 زنجیر چیک (4/4) مکمل کریں',
+        demurrageTitle: '⏳ سائٹ پر مفت انتظار کا وقت (2 گھنٹے):',
+        demurrageRule: 'پہلے 2 گھنٹے مفت • اس کے بعد 100 ریال فی گھنٹہ سائٹ تاخیر',
+        demurrageStartBtn: 'انتظار ٹائمر شروع کریں',
+        step3ClosureTitle: '3. ان لوڈنگ کی تصدیق، OTP کوڈ اور ریٹنگ',
+        otpConfirmBtn: 'ڈلیوری کوڈ (4829) کی تصدیق کریں اور ٹرپ مکمل کریں 🏁',
+        tripCompletedBadge: '🎉 ٹرپ کامیابی سے مکمل ہو گیا اور کرایہ جاری کر دیا گیا!'
+      },
+      hi: {
+        dir: 'ltr',
+        headerTitle: 'लोबेड ड्राइवर स्क्रीन (बिना कीबोर्ड)',
+        netPayoutLabel: 'लोडिंग पर आपका शुद्ध किराया:',
+        otpLabel: 'डिलीवरी कोड OTP:',
+        bidAccept: 'किराया स्वीकार ✓',
+        bidPlus150: '+150 SAR (दूरी)',
+        bidPlus300: '+300 SAR (कच्चा रास्ता)',
+        step1Title: '1. लोडिंग से पहले मशीन के 4 कोनों की फोटो',
+        step2Title: '2. चेन और बाइंडर (Lashing) सुरक्षा जांच',
+        quickComplete: 'तुरंत पूरा करें ⚡',
+        corners: ['आगे दाएं (FR)', 'आगे बाएं (FL)', 'पीछे दाएं (RR)', 'पीछे बाएं (RL)'],
+        lashing: ['आगे दाएं चेन लॉक', 'आगे बाएं चेन लॉक', 'पीछे चेन और बूम लॉक', 'लकड़ी के गुटके और व्हील चॉक'],
+        quickMsgTitle: 'ठेकेदार को 1-क्लिक में स्थिति भेजें:',
+        quickMsgs: ['📍 गेट पर खड़ा हूँ', '🚜 मशीन लोड हो रही है', '🔗 चेन बांधकर निकल गए', '🏁 साइट पर पहुँच गए'],
+        startReady: '✓ चलने के लिए तैयार — GPS यात्रा शुरू करें',
+        startLocked: '🔒 चलने के लिए 4 फोटो (4/4) और 4 चेन जांच (4/4) पूरी करें',
+        demurrageTitle: '⏳ साइट पर मुफ्त प्रतीक्षा समय (2 घंटे):',
+        demurrageRule: 'पहले 2 घंटे मुफ्त • उसके बाद +100 SAR/घंटा देरी शुल्क',
+        demurrageStartBtn: 'प्रतीक्षा टाइमर शुरू करें',
+        step3ClosureTitle: '3. अनलोडिंग पुष्टि, OTP (4829) और रेटिंग',
+        otpConfirmBtn: 'OTP (4829) की पुष्टि करें और ट्रिप पूरी करें 🏁',
+        tripCompletedBadge: '🎉 ट्रिप सफलतापूर्वक पूरी हुई और भुगतान जारी हो गया!'
+      },
+      en: {
+        dir: 'ltr',
+        headerTitle: 'Lowbed Driver Field Screen (Zero-Keyboard)',
+        netPayoutLabel: 'Your Net Freight Payout on Lashing:',
+        otpLabel: 'Delivery OTP Code:',
+        bidAccept: 'Accept Freight ✓',
+        bidPlus150: '+150 SAR (Distance)',
+        bidPlus300: '+300 SAR (Rough Site)',
+        step1Title: '1. Capture 4-Corner Pre-Load Photos',
+        step2Title: '2. Steel Chains & Binders Checklist',
+        quickComplete: 'Quick Verify 4/4 ⚡',
+        corners: ['Front Right', 'Front Left', 'Rear Right', 'Rear Left'],
+        lashing: ['Front-Right Chain Binder', 'Front-Left Chain Binder', 'Rear Chain & Boom Lock', 'Timber Cribbing & Chocks'],
+        quickMsgTitle: '1-Tap Instant Status to Contractor:',
+        quickMsgs: ['📍 At Site Gate', '🚜 Loading Equipment', '🔗 Chained & Moving', '🏁 Arrived at Drop-off'],
+        startReady: '✓ Ready to Roll — Start Trip & Live GPS',
+        startLocked: '🔒 Complete 4/4 Corner Photos & 4/4 Chain Checks to Unlock',
+        demurrageTitle: '⏳ Free Site Waiting Timer (2 Hours):',
+        demurrageRule: 'First 2 hrs free • Then +100 SAR/hr site delay fee',
+        demurrageStartBtn: 'Start Gate Waiting Timer',
+        step3ClosureTitle: '3. Unloading Confirmation, OTP (4829) & Rating',
+        otpConfirmBtn: 'Verify OTP (4829) & Complete Mission 🏁',
+        tripCompletedBadge: '🎉 Mission Completed! Freight Released & Contractor Rated.'
+      }
+    };
+
+    // 2. Categories & 31 Heavy Equipment Catalog
+    const EQUIPMENT_CATEGORIES = [
+      { id: 'all', label: 'الكل (31)', icon: 'fa-layer-group' },
+      { id: 'excavator', label: 'بوكلينات', icon: 'fa-person-digging' },
+      { id: 'dozer', label: 'دوزرات', icon: 'fa-Tractor' },
+      { id: 'loader', label: 'شيولات', icon: 'fa-truck-monster' },
+      { id: 'backhoe', label: 'باكهو / بوبكات', icon: 'fa-snowplow' },
+      { id: 'road', label: 'قريدر / سفلتة', icon: 'fa-road' },
+      { id: 'crane', label: 'كرينات / رافعات', icon: 'fa-tower-observation' },
+      { id: 'other', label: 'كسارات / بركسات', icon: 'fa-industry' }
+    ];
+
+    const EQUIPMENT_CATALOG = [
+      { id: 'cat320', name: 'بوكلين CAT 320D', shortName: 'بوكلين 320', cat: 'excavator', weight: 22, widthM: 2.8, move: 'tracked', lowbed: 'لوبد محورين عادي (حتى 35 طن)', axles: 'محورين', icon: '🚜' },
+      { id: 'cat336', name: 'بوكلين CAT 336D', shortName: 'بوكلين 336', cat: 'excavator', weight: 36, widthM: 3.19, move: 'tracked', lowbed: 'لوبد 3 محاور رقبة هيدروليك RGN', axles: '3 محاور RGN', icon: '🚜' },
+      { id: 'komatsu_pc400', name: 'حفار كوماتسو PC400', shortName: 'حفار PC400', cat: 'excavator', weight: 43, widthM: 3.35, move: 'tracked', lowbed: 'لوبد 3 محاور رقبة هيدروليك RGN', axles: '3 محاور RGN', icon: '⛏️' },
+      { id: 'hitachi_zx470', name: 'بوكلين هيتاشي ZX470', shortName: 'بوكلين ZX470', cat: 'excavator', weight: 48, widthM: 3.48, move: 'tracked', lowbed: 'لوبد 3 محاور رقبة هيدروليك RGN', axles: '3 محاور RGN', icon: '⛏️' },
+      { id: 'wheel_excavator', name: 'بوكلين كفرات M318', shortName: 'بوكلين كفرات', cat: 'excavator', weight: 19, widthM: 2.55, move: 'wheeled', lowbed: 'لوبد محورين عادي (حتى 35 طن)', axles: 'محورين', icon: '🛞' },
+      { id: 'd6r', name: 'بلدوزر CAT D6R', shortName: 'دوزر D6R', cat: 'dozer', weight: 22, widthM: 2.95, move: 'tracked', lowbed: 'لوبد محورين عادي (حتى 35 طن)', axles: 'محورين', icon: '🚧' },
+      { id: 'd8r', name: 'بلدوزر CAT D8R', shortName: 'دوزر D8R', cat: 'dozer', weight: 38, widthM: 3.94, move: 'tracked', lowbed: 'لوبد 3 محاور رقبة هيدروليك RGN', axles: '3 محاور RGN', icon: '🚧' },
+      { id: 'd9r', name: 'بلدوزر CAT D9R', shortName: 'دوزر D9R', cat: 'dozer', weight: 49, widthM: 4.31, move: 'tracked', lowbed: 'لوبد 3 محاور رقبة هيدروليك RGN', axles: '3 محاور RGN', icon: '🚧' },
+      { id: 'd10t', name: 'بلدوزر CAT D10T', shortName: 'دوزر D10T', cat: 'dozer', weight: 68, widthM: 4.85, move: 'tracked', lowbed: 'لوبد ثقيل 4 محاور (حتى 80 طن)', axles: '4 محاور ثقيل', icon: '🚧' },
+      { id: 'cat950', name: 'شيول CAT 950GC', shortName: 'شيول 950', cat: 'loader', weight: 19, widthM: 2.82, move: 'wheeled', lowbed: 'لوبد محورين عادي (حتى 35 طن)', axles: 'محورين', icon: '🚜' },
+      { id: 'cat966', name: 'شيول CAT 966M', shortName: 'شيول 966', cat: 'loader', weight: 24, widthM: 2.99, move: 'wheeled', lowbed: 'لوبد محورين عادي (حتى 35 طن)', axles: 'محورين', icon: '🚜' },
+      { id: 'cat980', name: 'شيول CAT 980', shortName: 'شيول 980', cat: 'loader', weight: 31, widthM: 3.30, move: 'wheeled', lowbed: 'لوبد 3 محاور رقبة هيدروليك RGN', axles: '3 محاور RGN', icon: '🚜' },
+      { id: 'backhoe_428', name: 'باكهو لودر 428F', shortName: 'باكهو 428', cat: 'backhoe', weight: 9, widthM: 2.35, move: 'wheeled', lowbed: 'لوبد محورين عادي (حتى 35 طن)', axles: 'محورين', icon: '🚜' },
+      { id: 'bobcat_s650', name: 'بوبكات S650', shortName: 'بوبكات S650', cat: 'backhoe', weight: 4, widthM: 1.88, move: 'wheeled', lowbed: 'لوبد محورين عادي (حتى 35 طن)', axles: 'محورين', icon: '🚜' },
+      { id: 'grader_140', name: 'قريدر CAT 140K', shortName: 'قريدر 140K', cat: 'road', weight: 17, widthM: 2.50, move: 'wheeled', lowbed: 'لوبد محورين عادي (حتى 35 طن)', axles: 'محورين', icon: '🛣️' },
+      { id: 'paver_1055', name: 'فرادة أسفلت 1055D', shortName: 'فرادة أسفلت', cat: 'road', weight: 21, widthM: 3.10, move: 'tracked', lowbed: 'لوبد 3 محاور رقبة هيدروليك RGN', axles: '3 محاور RGN', icon: '🛣️' },
+      { id: 'roller_cs56', name: 'رول رصاصة CS56B', shortName: 'رصاصة CS56', cat: 'road', weight: 12, widthM: 2.30, move: 'wheeled', lowbed: 'لوبد محورين عادي (حتى 35 طن)', axles: 'محورين', icon: '🛞' },
+      { id: 'scraper_623', name: 'قشاطة CAT 623K', shortName: 'قشاطة 623', cat: 'road', weight: 34, widthM: 3.55, move: 'wheeled', lowbed: 'لوبد 3 محاور رقبة هيدروليك RGN', axles: '3 محاور RGN', icon: '🛣️' },
+      { id: 'crane_50t', name: 'كرين تادانو 50 طن', shortName: 'كرين 50 طن', cat: 'crane', weight: 40, widthM: 2.85, move: 'wheeled', lowbed: 'لوبد 3 محاور رقبة هيدروليك RGN', axles: '3 محاور RGN', icon: '🏗️' },
+      { id: 'crane_100t', name: 'كرين ليبهير 100 طن', shortName: 'كرين 100 طن', cat: 'crane', weight: 58, widthM: 3.00, move: 'wheeled', lowbed: 'لوبد ثقيل 4 محاور (حتى 80 طن)', axles: '4 محاور ثقيل', icon: '🏗️' },
+      { id: 'telehandler', name: 'تلي هاندلر JCB 17م', shortName: 'تلي هاندلر', cat: 'crane', weight: 12, widthM: 2.40, move: 'wheeled', lowbed: 'لوبد محورين عادي (حتى 35 طن)', axles: 'محورين', icon: '🏗️' },
+      { id: 'crusher_mobile', name: 'كسارة متنقلة مجنزرة', shortName: 'كسارة متنقلة', cat: 'other', weight: 62, widthM: 3.60, move: 'tracked', lowbed: 'لوبد ثقيل 4 محاور (حتى 80 طن)', axles: '4 محاور ثقيل', icon: '⛰️' },
+      { id: 'cabin_port', name: 'بركس / كرفان موقع 12م', shortName: 'بركس موقع', cat: 'other', weight: 8, widthM: 3.75, move: 'static', lowbed: 'لوبد محورين عادي (حتى 35 طن)', axles: 'محورين', icon: '🏠' },
+      { id: 'gen_1000kva', name: 'مولد كهرباء 1000 KVA', shortName: 'مولد 1000KVA', cat: 'other', weight: 14, widthM: 2.40, move: 'static', lowbed: 'لوبد محورين عادي (حتى 35 طن)', axles: 'محورين', icon: '⚡' },
+      { id: 'drill_rig', name: 'حفارة آبار روتاري', shortName: 'حفارة آبار', cat: 'other', weight: 52, widthM: 3.20, move: 'tracked', lowbed: 'لوبد 3 محاور رقبة هيدروليك RGN', axles: '3 محاور RGN', icon: '🔩' },
+      { id: 'concrete_pump', name: 'مضخة خرسانة 46م', shortName: 'مضخة 46م', cat: 'other', weight: 38, widthM: 2.60, move: 'wheeled', lowbed: 'لوبد 3 محاور رقبة هيدروليك RGN', axles: '3 محاور RGN', icon: '🏗️' },
+      { id: 'compactor_815', name: 'رصاصة غنم 815F', shortName: 'رصاصة 815F', cat: 'road', weight: 20, widthM: 3.25, move: 'wheeled', lowbed: 'لوبد محورين عادي (حتى 35 طن)', axles: 'محورين', icon: '🛞' },
+      { id: 'excavator_200', name: 'بوكلين خفيف 200', shortName: 'بوكلين 200', cat: 'excavator', weight: 20, widthM: 2.80, move: 'tracked', lowbed: 'لوبد محورين عادي (حتى 35 طن)', axles: 'محورين', icon: '🚜' },
+      { id: 'dozer_d7e', name: 'بلدوزر CAT D7E', shortName: 'دوزر D7E', cat: 'dozer', weight: 27, widthM: 3.40, move: 'tracked', lowbed: 'لوبد محورين عادي (حتى 35 طن)', axles: 'محورين', icon: '🚧' },
+      { id: 'crane_crawler', name: 'كرين مجنزر 80 طن', shortName: 'كرين مجنزر', cat: 'crane', weight: 66, widthM: 4.20, move: 'tracked', lowbed: 'لوبد ثقيل 4 محاور (حتى 80 طن)', axles: '4 محاور ثقيل', icon: '🏗️' },
+      { id: 'transformer_hv', name: 'محول كهرباء ثقيل', shortName: 'محول ثقيل', cat: 'other', weight: 72, widthM: 3.50, move: 'static', lowbed: 'لوبد ثقيل 4 محاور (حتى 80 طن)', axles: '4 محاور ثقيل', icon: '⚡' }
+    ];
+
+    const FIELD_SITES_DIRECTORY = [
+      { name: 'المدينة المنورة — الصناعية', type: 'city', lat: 24.4120, lng: 39.4850, distanceKm: 220, terrain: 'paved' },
+      { name: 'ينبع الصناعية — بوابة 4', type: 'city', lat: 24.0895, lng: 38.0618, distanceKm: 220, terrain: 'paved' },
+      { name: 'جدة — الخمرة / الميناء', type: 'city', lat: 21.3891, lng: 39.1879, distanceKm: 420, terrain: 'paved' },
+      { name: 'الرياض — طريق الخرج', type: 'city', lat: 24.6333, lng: 46.7167, distanceKm: 840, terrain: 'paved' },
+      { name: 'هجرة المسيجيد', type: 'hijrah', lat: 24.0510, lng: 39.0480, distanceKm: 135, terrain: 'sand' },
+      { name: 'هجرة الحناكية', type: 'hijrah', lat: 24.8320, lng: 40.5170, distanceKm: 110, terrain: 'sand' },
+      { name: 'كسارات طريق ينبع السريع', type: 'quarry', lat: 24.2210, lng: 38.8910, distanceKm: 145, terrain: 'rough' },
+      { name: 'كسارات وادي الفرع', type: 'quarry', lat: 23.8120, lng: 39.6120, distanceKm: 160, terrain: 'rough' },
+      { name: 'مشروع البنية التحتية — شمال المدينة', type: 'project', lat: 24.5510, lng: 39.6210, distanceKm: 35, terrain: 'sand' },
+      { name: 'مشروع السكة الحديدية — رابغ', type: 'project', lat: 22.7926, lng: 39.0349, distanceKm: 275, terrain: 'sand' }
+    ];
+
+    const SCHEDULE_SLOTS = {
+      dawn: { label: '🌅 بكرة الفجر 5:00 ص', note: '✅ موعد مثالي للمشاريع: يتفادى ذروة منع دخول الشاحنات (6:30–9:00 ص) وتصل المعدة قبل دوام العمال.' },
+      now: { label: '⚡ الآن (فوري)', note: '⚡ تحرك فوري: تنبيه آلي للسائق بالمسارات المسموحة للشاحنات خارج أوقات الذروة المرورية.' },
+      afternoon: { label: '🌇 بعد العصر 4:00 م', note: '🌇 مناسب لنقل المعدات بعد انتهاء شفت العمل الصباحي؛ يُراعى وقت منع المساء (4:30–8:00 م) داخل المدن الكبرى.' }
+    };
+
+    const AppState = {
+      currentView: 'client',
+      selectedCategory: 'all',
+      searchQuery: '',
+      selectedEquipId: 'cat336',
+      lowbedCountMultiplier: 1,
+      origin: 'المدينة المنورة',
+      originCoords: [24.4686, 39.6142],
+      destination: 'ينبع الصناعية',
+      destCoords: [24.0895, 38.0618],
+      distanceKm: 220,
+      terrain: 'paved',
+      isBrokenWinch: false,
+      isBackhaul: false,
+      isPilotZeroCommission: false,
+      siteFilter: 'all',
+      driverLang: 'ar',
+      driverBidDelta: 0,
+      cornerPhotos: [true, true, false, false],
+      lashingChecks: [true, true, false, false],
+      customMoveType: 'tracked',
+      customPhotoUrl: 'https://placehold.co/160x120/FEF3C7/0F172A?text=CAT+36T',
+      onboardLang: 'ar',
+      onboardType: '3axles_rgn',
+      onboardMode: 'ready',
+      onboardGear: { chains: true, extensions: false, winch: false },
+      settlementMethod: 'deposit',
+      driverTransferTiming: 'on_lashing',
+      bayanOptionalNumber: '',
+      // 5 NEW COMPLETION STATES
+      loadingTimeSlot: 'dawn', // 'dawn' | 'now' | 'afternoon'
+      demurrageActive: false,
+      demurrageSecondsRemaining: 7185, // 01:59:45
+      tripStage: 1, // 1: الطلب, 2: التعميد, 3: التوثيق 4/4, 4: عالطريق, 5: تم التسليم
+      driverRatingStars: 5,
+      activeOrder: {
+        id: '#LB-8841',
+        otp: '4829',
+        phone: '0501234567',
+        operatorPhone: '0559876543',
+        needsGatePermit: false,
+        selectedBidId: 'bid-1',
+        driverName: 'سالم الحربي — مكتب طيبة للوابد',
+        driverPlate: 'أ ب ج 4820',
+        driverIban: 'SA44 8000 0000 6080 1199 4410',
+        depositPaid: false,
+        tripCompleted: false
+      },
+      driverBids: [
+        { id: 'bid-1', driverName: 'سالم الحربي — مكتب طيبة للوابد', plate: 'أ ب ج 4820', lowbed: '3 محاور رقبة RGN', rating: '4.9 ★', fastBadge: true, delta: 0, iban: 'SA44 8000 0000 6080 1199 4410' },
+        { id: 'bid-2', driverName: 'راجيش كومار — لوبد 3 محاور', plate: 'د هـ و 7310', lowbed: '3 محاور رقبة RGN', rating: '4.8 ★', fastBadge: true, delta: 150, iban: 'SA12 1000 0000 1234 5678 9012' },
+        { id: 'bid-3', driverName: 'فهد الشمري — ردّ راجع ينبع (-30%)', plate: 'ر س ص 9104', lowbed: '3 محاور رقبة RGN', rating: '5.0 ★', fastBadge: true, delta: -300, iban: 'SA99 5000 0000 9876 5432 1098' }
+      ]
+    };
+
+    let routeMapInstance = null;
+    let routePolylineLayer = null;
+    let demurrageInterval = null;
+
+    function getSelectedEquipment() {
+      return EQUIPMENT_CATALOG.find(item => item.id === AppState.selectedEquipId) || EQUIPMENT_CATALOG[0];
+    }
+
+    function calculatePricing(overrideDelta = null) {
+      const equip = getSelectedEquipment();
+      const bidDelta = overrideDelta !== null ? overrideDelta : AppState.driverBidDelta;
+      const baseRatePerKm = equip.weight > 55 ? 11.5 : equip.weight > 30 ? 9.2 : 7.0;
+      let singleSubtotal = Math.round(AppState.distanceKm * baseRatePerKm);
+      if (AppState.isBrokenWinch || equip.move === 'static') singleSubtotal += 350;
+      if (AppState.terrain === 'rough') singleSubtotal += 200;
+      if (AppState.isBackhaul) singleSubtotal = Math.round(singleSubtotal * 0.7);
+      singleSubtotal = Math.max(550, singleSubtotal + bidDelta);
+
+      const subtotal = singleSubtotal * AppState.lowbedCountMultiplier;
+
+      if (AppState.isPilotZeroCommission) {
+        return {
+          total: subtotal,
+          commission: 0,
+          vatOnCommission: 0,
+          depositAmount: 0,
+          driverNetPayout: subtotal
+        };
+      }
+
+      let commissionRate = 0.065;
+      let commissionCap = 185 * AppState.lowbedCountMultiplier;
+      if (AppState.isBackhaul) {
+        commissionRate = 0.035;
+        commissionCap = 150 * AppState.lowbedCountMultiplier;
+      } else if (singleSubtotal < 1200) {
+        commissionRate = 0.08;
+        commissionCap = 95 * AppState.lowbedCountMultiplier;
+      } else if (singleSubtotal > 3000) {
+        commissionRate = 0.05;
+        commissionCap = 250 * AppState.lowbedCountMultiplier;
+      }
+
+      const commission = Math.min(commissionCap, Math.max(45, Math.round(subtotal * commissionRate)));
+      const vatOnCommission = Math.round(commission * 0.15);
+      const depositAmount = commission + vatOnCommission;
+      const driverNetPayout = Math.max(0, subtotal - depositAmount);
+
+      return {
+        total: subtotal,
+        commission,
+        vatOnCommission,
+        depositAmount,
+        driverNetPayout
+      };
+    }
+
+    // Compute Current Live Order Stage (1 to 5)
+    function computeCurrentTripStage() {
+      if (AppState.activeOrder.tripCompleted || AppState.tripStage === 5) return 5;
+      if (AppState.tripStage === 4) return 4;
+      const safetyOk = AppState.cornerPhotos.every(Boolean) && AppState.lashingChecks.every(Boolean);
+      if (safetyOk) return 3;
+      if (AppState.activeOrder.depositPaid) return 2;
+      return 1;
+    }
+
+    function renderLiveOrderTracker() {
+      const bar = document.getElementById('live-order-tracker-bar');
+      if (!bar) return;
+      const stage = computeCurrentTripStage();
+      const steps = [
+        { num: 1, label: 'الطلب' },
+        { num: 2, label: 'التعميد' },
+        { num: 3, label: 'توثيق 4/4' },
+        { num: 4, label: 'عالطريق' },
+        { num: 5, label: 'تم التسليم' }
+      ];
+      const slotInfo = SCHEDULE_SLOTS[AppState.loadingTimeSlot] || SCHEDULE_SLOTS.dawn;
+      const gateText = AppState.activeOrder.needsGatePermit ? '🪪 تصريح بوابة أمني' : '🟢 موقع مفتوح';
+
+      bar.innerHTML = `
+        <div class="flex flex-wrap items-center justify-between gap-1 text-[10px]">
+          <span class="font-extrabold text-slate-800">تتبع حالة النقلة (${AppState.activeOrder.id}):</span>
+          <div class="flex items-center gap-1.5">
+            <span class="px-2 py-0.5 rounded-md bg-amber-100 text-amber-950 font-extrabold">${slotInfo.label}</span>
+            <span class="px-2 py-0.5 rounded-md bg-slate-200 text-slate-800 font-bold">${gateText}</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-5 gap-1 pt-0.5">
+          ${steps.map(s => {
+            const done = s.num <= stage;
+            const current = s.num === stage;
+            return `
+              <button
+                type="button"
+                onclick="jumpToStagePreview(${s.num})"
+                class="py-1 px-1 rounded-xl text-center transition border ${
+                  done
+                    ? current
+                      ? 'bg-emerald-600 text-white border-emerald-700 font-extrabold shadow-sm'
+                      : 'bg-emerald-50 text-emerald-900 border-emerald-300 font-extrabold'
+                    : 'bg-white text-slate-400 border-slate-200 font-bold'
+                }"
+              >
+                <div class="text-[10px]">${done ? '✓' : s.num} ${s.label}</div>
+              </button>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function jumpToStagePreview(stageNum) {
+      if (stageNum === 1) {
+        switchMainView('client');
+      } else if (stageNum === 2) {
+        switchMainView('bids');
+      } else {
+        switchMainView('driver');
+      }
+    }
+
+    // Loading Schedule Functions
+    function cycleLoadingScheduleSlot() {
+      const order = ['dawn', 'now', 'afternoon'];
+      const nextIdx = (order.indexOf(AppState.loadingTimeSlot) + 1) % order.length;
+      setLoadingScheduleSlot(order[nextIdx]);
+      const info = SCHEDULE_SLOTS[AppState.loadingTimeSlot];
+      showToast(`تم ضبط موعد التحميل: ${info.label}`, info.note);
+    }
+
+    function setLoadingScheduleSlot(slot) {
+      AppState.loadingTimeSlot = slot;
+      ['dawn', 'now', 'afternoon'].forEach(s => {
+        const btn = document.getElementById(`sched-btn-${s}`);
+        if (!btn) return;
+        btn.className = s === slot
+          ? 'p-2 rounded-xl border-2 border-amber-500 bg-amber-50 font-extrabold text-slate-950 text-[11px]'
+          : 'p-2 rounded-xl border border-slate-300 bg-white font-bold text-slate-800 text-[11px]';
+      });
+      const noteEl = document.getElementById('schedule-traffic-ban-note');
+      if (noteEl && SCHEDULE_SLOTS[slot]) {
+        noteEl.textContent = SCHEDULE_SLOTS[slot].note;
+      }
+      syncAllViews();
+    }
+
+    function setSiteGatePermit(needsPermit) {
+      AppState.activeOrder.needsGatePermit = needsPermit;
+      const openBtn = document.getElementById('gate-btn-open');
+      const permitBtn = document.getElementById('gate-btn-permit');
+      if (openBtn && permitBtn) {
+        openBtn.className = !needsPermit
+          ? 'p-2 rounded-xl border-2 border-emerald-600 bg-white font-extrabold text-slate-950 text-[11px]'
+          : 'p-2 rounded-xl border border-slate-300 bg-white font-bold text-slate-800 text-[11px]';
+        permitBtn.className = needsPermit
+          ? 'p-2 rounded-xl border-2 border-amber-500 bg-amber-50 font-extrabold text-slate-950 text-[11px]'
+          : 'p-2 rounded-xl border border-slate-300 bg-white font-bold text-slate-800 text-[11px]';
+      }
+      syncAllViews();
+    }
+
+    // Demurrage 2-Hour Waiting Timer
+    function toggleDemurrageTimer(forceStart = false) {
+      if (forceStart) {
+        AppState.demurrageActive = true;
+      } else {
+        AppState.demurrageActive = !AppState.demurrageActive;
+      }
+      clearInterval(demurrageInterval);
+      if (AppState.demurrageActive) {
+        demurrageInterval = setInterval(() => {
+          if (AppState.demurrageSecondsRemaining > 0) {
+            AppState.demurrageSecondsRemaining--;
+          }
+          const timerEl = document.getElementById('driver-demurrage-countdown');
+          if (timerEl) {
+            timerEl.textContent = formatCountdown(AppState.demurrageSecondsRemaining);
+          }
+        }, 1000);
+        showToast('تم تفعيل عداد الانتظار بالموقع ⏳', 'أول ساعتين مجاناً للتحميل والتنزيل، وبعدها +100 ر.س/ساعة لحماية وقت السائق');
+      }
+      renderDriverView();
+    }
+
+    function formatCountdown(sec) {
+      const hrs = String(Math.floor(sec / 3600)).padStart(2, '0');
+      const mins = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
+      const secs = String(sec % 60).padStart(2, '0');
+      return `${hrs}:${mins}:${secs}`;
+    }
+
+    // View Switching including True Side-by-Side Dual Mode
+    function switchMainView(viewName) {
+      AppState.currentView = viewName;
+      const wrapper = document.getElementById('simulator-grid-wrapper');
+      const views = ['client', 'bids', 'driver', 'admin'];
+
+      if (viewName === 'dual') {
+        wrapper.className = 'max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 items-start transition-all duration-200';
+      } else {
+        wrapper.className = 'max-w-2xl mx-auto transition-all duration-200';
+      }
+
+      views.forEach(v => {
+        const sec = document.getElementById(`main-view-${v}`);
+        const btn = document.getElementById(`view-btn-${v}`);
+        if (sec) {
+          if (viewName === 'dual' && (v === 'client' || v === 'driver')) {
+            sec.classList.remove('hidden');
+          } else if (v === viewName) {
+            sec.classList.remove('hidden');
+          } else {
+            sec.classList.add('hidden');
+          }
+        }
+        if (btn) {
+          const active = btn.id === `view-btn-${viewName}`;
+          btn.className = active
+            ? 'px-3 py-1.5 rounded-xl font-extrabold bg-amber-400 text-slate-950 shadow-sm'
+            : 'px-3 py-1.5 rounded-xl font-bold bg-slate-100 text-slate-700 hover:bg-slate-200';
+        }
+      });
+
+      const dualBtn = document.getElementById('view-btn-dual');
+      if (dualBtn) {
+        dualBtn.className = viewName === 'dual'
+          ? 'px-3 py-1.5 rounded-xl font-extrabold bg-amber-400 text-slate-950 shadow-sm'
+          : 'px-3 py-1.5 rounded-xl font-bold bg-slate-900 text-amber-300 hover:bg-slate-800';
+      }
+
+      syncAllViews();
+    }
+
+    function setLowbedCountMultiplier(count) {
+      AppState.lowbedCountMultiplier = count;
+      [1, 2, 3].forEach(c => {
+        const btn = document.getElementById(`mult-btn-${c}`);
+        if (!btn) return;
+        btn.className = c === count
+          ? 'px-2 py-0.5 rounded-lg text-[10px] font-extrabold bg-amber-400 text-slate-950'
+          : 'px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-700';
+      });
+      syncAllViews();
+      showToast(`تم تحديد عدد اللوابد: ×${count}`, 'تم تحديث إجمالي النولون وعربون التعميد تلقائياً');
+    }
+
+    function renderCatalogCategories() {
+      const bar = document.getElementById('catalog-categories-bar');
+      if (!bar) return;
+      bar.innerHTML = EQUIPMENT_CATEGORIES.map(cat => {
+        const active = AppState.selectedCategory === cat.id;
+        return `
+          <button
+            type="button"
+            onclick="selectCatalogCategory('${cat.id}')"
+            class="px-3 py-1.5 rounded-xl text-[11px] whitespace-nowrap shrink-0 transition flex items-center gap-1.5 ${
+              active ? 'bg-slate-900 text-amber-300 font-extrabold shadow-sm' : 'bg-slate-100 text-slate-700 font-bold hover:bg-slate-200'
+            }"
+          >
+            <span>${cat.label}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectCatalogCategory(catId) {
+      AppState.selectedCategory = catId;
+      renderCatalogCategories();
+      renderEquipmentGrid();
+    }
+
+    function handleSmartUnifiedSearch(val) {
+      AppState.searchQuery = (val || '').trim().toLowerCase();
+      renderEquipmentGrid();
+    }
+
+    function triggerVoiceSearchHint() {
+      showToast('البحث الصوتي الذكي 🎙️', 'قل مثلاً: "دوزر D8 من المدينة إلى ينبع بكرة الفجر"');
+      const input = document.getElementById('smart-unified-search');
+      if (input) input.focus();
+    }
+
+    // Rich 3x3 Equipment Cards with Visual Icons & Axle Badges
+    function renderEquipmentGrid() {
+      const grid = document.getElementById('equipment-catalog-grid');
+      if (!grid) return;
+      const filtered = EQUIPMENT_CATALOG.filter(item => {
+        const catMatch = AppState.selectedCategory === 'all' || item.cat === AppState.selectedCategory;
+        const q = AppState.searchQuery.replace(/\s+/g, '');
+        const normName = item.name.toLowerCase().replace(/\s+/g, '');
+        const normShort = item.shortName.toLowerCase().replace(/\s+/g, '');
+        const searchMatch = !q || normName.includes(q) || normShort.includes(q) || String(item.weight).includes(q);
+        return catMatch && searchMatch;
+      });
+
+      if (!filtered.length) {
+        grid.innerHTML = `<div class="col-span-3 p-6 text-center text-xs font-bold text-slate-500 bg-slate-50 rounded-2xl border border-slate-200">لا توجد معدة مطابقة — اضغط على الشريط العلوي (+ أضف معدتك الخاصة) لإضافتها فوراً</div>`;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(item => {
+        const selected = item.id === AppState.selectedEquipId;
+        const moveBadge = item.move === 'tracked'
+          ? { text: '⛓️ جنزير', cls: 'bg-amber-100 text-amber-950' }
+          : item.move === 'wheeled'
+          ? { text: '🛞 كفرات', cls: 'bg-sky-100 text-sky-950' }
+          : { text: '🏗️ ثابتة', cls: 'bg-purple-100 text-purple-950' };
+
+        const axleColor = item.weight > 55
+          ? 'text-rose-800 bg-rose-50 border-rose-200'
+          : item.weight > 30
+          ? 'text-sky-900 bg-sky-50 border-sky-200'
+          : 'text-emerald-900 bg-emerald-50 border-emerald-200';
+
+        return `
+          <button
+            type="button"
+            onclick="selectEquipment('${item.id}')"
+            class="p-2.5 rounded-2xl border-2 text-right transition flex flex-col justify-between relative ${
+              selected
+                ? 'border-amber-500 bg-gradient-to-b from-amber-50/90 to-white shadow-md ring-2 ring-amber-300/50'
+                : 'border-slate-200 bg-white hover:border-amber-300 hover:shadow-sm'
+            }"
+          >
+            <div class="flex items-center justify-between gap-1 w-full">
+              <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-lg ${moveBadge.cls}">${moveBadge.text}</span>
+              <span class="text-base">${item.icon || '🚜'}</span>
+            </div>
+
+            <div class="my-1">
+              <div class="font-extrabold text-xs text-slate-950 truncate">${item.shortName}</div>
+              <div class="text-[10px] font-bold text-slate-500 truncate">${item.name}</div>
+            </div>
+
+            <div class="flex items-center justify-between gap-1 pt-1 border-t border-slate-100 w-full">
+              <span class="text-[10px] font-extrabold text-slate-900">${item.weight} طن</span>
+              <span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded border ${axleColor}">${item.axles}</span>
+            </div>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectEquipment(id) {
+      AppState.selectedEquipId = id;
+      syncAllViews();
+    }
+
+    function toggleBrokenEquipmentWinch() {
+      AppState.isBrokenWinch = !AppState.isBrokenWinch;
+      syncAllViews();
+    }
+
+    function toggleQuickBackhaul() {
+      AppState.isBackhaul = !AppState.isBackhaul;
+      syncAllViews();
+    }
+
+    function repeatLastOrderOneTap() {
+      AppState.origin = 'المدينة المنورة';
+      AppState.destination = 'ينبع الصناعية';
+      AppState.distanceKm = 220;
+      AppState.selectedEquipId = 'd8r';
+      AppState.loadingTimeSlot = 'dawn';
+      syncAllViews();
+      showToast('تم تكرار آخر طلب بنقرة واحدة ↻', 'بلدوزر D8R • المدينة المنورة ⬅ ينبع (بكرة الفجر 5:00 ص)');
+    }
+
+    function copyOrderWhatsappCard() {
+      const equip = getSelectedEquipment();
+      const pricing = calculatePricing();
+      const slotInfo = SCHEDULE_SLOTS[AppState.loadingTimeSlot] || SCHEDULE_SLOTS.dawn;
+      const gateInfo = AppState.activeOrder.needsGatePermit ? 'يتطلب تصريح بوابة أمني' : 'موقع مفتوح';
+      const cardText = `🚛 *بطاقة طلب لوبد — منصة اللوابد*\n• رقم الطلب: ${AppState.activeOrder.id}\n• المعدة: ${equip.name} (${equip.weight} طن)\n• اللوبد المطابق: ${equip.lowbed}\n• المسار: ${AppState.origin} ⬅ ${AppState.destination} (${AppState.distanceKm} كم)\n• موعد التحميل: ${slotInfo.label}\n• جوال سائق المعدة (المفتاح): ${AppState.activeOrder.operatorPhone} (${gateInfo})\n• النولون الصافي: ${pricing.total.toLocaleString('ar-SA')} ر.س\n• رمز الاستلام OTP: ${AppState.activeOrder.otp}`;
+      copyTextToClipboard(cardText, 'تم نسخ بطاقة الواتساب الكاملة ✓', 'شاملة موعد التحميل وجوال سائق المعدة ورمز OTP');
+    }
+
+    function copyTextToClipboard(text, title, desc) {
+      const temp = document.createElement('textarea');
+      temp.value = text;
+      document.body.appendChild(temp);
+      temp.select();
+      try {
+        document.execCommand('copy');
+        showToast(title, desc);
+      } catch (e) {
+        showToast('تم تجهيز النص', 'انسخ النص يدوياً');
+      }
+      document.body.removeChild(temp);
+    }
+
+    // Location & Interactive Leaflet Map Modal
+    function openEquipmentLocationModal() {
+      const modal = document.getElementById('equipment-location-modal');
+      if (!modal) return;
+      document.getElementById('loc-origin-input').value = AppState.origin;
+      document.getElementById('loc-dest-input').value = AppState.destination;
+      document.getElementById('modal-distance-val').textContent = `${AppState.distanceKm} كم`;
+      document.getElementById('modal-distance-slider').value = AppState.distanceKm;
+      renderFieldSitesQuickList();
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+
+      setTimeout(() => {
+        initOrUpdateRouteLeafletMap();
+      }, 120);
+    }
+
+    function initOrUpdateRouteLeafletMap() {
+      if (typeof L === 'undefined') return;
+      const mapEl = document.getElementById('route-leaflet-map');
+      if (!mapEl) return;
+
+      if (!routeMapInstance) {
+        routeMapInstance = L.map('route-leaflet-map').setView([24.25, 38.85], 7);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap'
+        }).addTo(routeMapInstance);
+      }
+
+      routeMapInstance.invalidateSize();
+      if (routePolylineLayer) {
+        routeMapInstance.removeLayer(routePolylineLayer);
+      }
+
+      const latlngs = [AppState.originCoords, AppState.destCoords];
+      routePolylineLayer = L.featureGroup([
+        L.marker(AppState.originCoords).bindPopup(`التحميل: ${AppState.origin}`),
+        L.marker(AppState.destCoords).bindPopup(`التنزيل: ${AppState.destination}`),
+        L.polyline(latlngs, { color: '#D97706', weight: 4, dashArray: '8, 6' })
+      ]).addTo(routeMapInstance);
+
+      routeMapInstance.fitBounds(routePolylineLayer.getBounds(), { padding: [25, 25] });
+    }
+
+    function closeEquipmentLocationModal() {
+      const modal = document.getElementById('equipment-location-modal');
+      if (!modal) return;
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      syncAllViews();
+    }
+
+    function setFieldSiteFilter(filter) {
+      AppState.siteFilter = filter;
+      ['all', 'city', 'hijrah', 'quarry', 'project'].forEach(f => {
+        const btn = document.getElementById(`site-filter-${f}`);
+        if (!btn) return;
+        btn.className = f === filter
+          ? 'px-2.5 py-1 rounded-lg bg-slate-900 text-white font-extrabold text-[11px]'
+          : 'px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 font-bold text-[11px]';
+      });
+      renderFieldSitesQuickList();
+    }
+
+    function renderFieldSitesQuickList() {
+      const list = document.getElementById('field-sites-quick-list');
+      if (!list) return;
+      const sites = FIELD_SITES_DIRECTORY.filter(s => AppState.siteFilter === 'all' || s.type === AppState.siteFilter);
+      const badgeMap = {
+        city: '🏙️ مدينة',
+        hijrah: '🏘️ هجرة',
+        quarry: '⛰️ كسارة',
+        project: '🏗️ مشروع'
+      };
+      list.innerHTML = sites.map((s, idx) => `
+        <button
+          type="button"
+          onclick="applySelectedFieldSite(${idx})"
+          class="p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-amber-50 hover:border-amber-400 text-right transition flex items-center justify-between"
+        >
+          <div>
+            <div class="font-extrabold text-[11px] text-slate-950">${s.name}</div>
+            <div class="text-[10px] font-bold text-slate-500">${badgeMap[s.type]} • أرضية: ${s.terrain === 'rough' ? 'وعرة' : s.terrain === 'sand' ? 'ردمية' : 'مزفلت'}</div>
+          </div>
+          <span class="px-2 py-0.5 rounded-lg bg-white border border-slate-200 font-extrabold text-[10px] text-amber-800">${s.distanceKm} كم</span>
+        </button>
+      `).join('');
+    }
+
+    function applySelectedFieldSite(idx) {
+      const sites = FIELD_SITES_DIRECTORY.filter(s => AppState.siteFilter === 'all' || s.type === AppState.siteFilter);
+      const site = sites[idx];
+      if (!site) return;
+      AppState.destination = site.name;
+      AppState.destCoords = [site.lat, site.lng];
+      AppState.distanceKm = site.distanceKm;
+      setSiteTerrain(site.terrain);
+      document.getElementById('loc-dest-input').value = site.name;
+      document.getElementById('modal-distance-val').textContent = `${site.distanceKm} كم`;
+      document.getElementById('modal-distance-slider').value = site.distanceKm;
+      initOrUpdateRouteLeafletMap();
+      syncAllViews();
+      showToast('تم اختيار الموقع الميداني 📍', `${site.name} (${site.distanceKm} كم)`);
+    }
+
+    function handleDistanceSliderChange(val) {
+      AppState.distanceKm = Number(val || 220);
+      document.getElementById('modal-distance-val').textContent = `${AppState.distanceKm} كم`;
+      syncAllViews();
+    }
+
+    function updateLocationRouteMetrics() {
+      const o = document.getElementById('loc-origin-input').value.trim() || 'المدينة المنورة';
+      const d = document.getElementById('loc-dest-input').value.trim() || 'ينبع';
+      AppState.origin = o;
+      AppState.destination = d;
+      syncAllViews();
+    }
+
+    function parseWhatsappLocationLink() {
+      const input = document.getElementById('whatsapp-loc-link-input');
+      if (!input) return;
+      const raw = input.value.trim();
+      const match = raw.match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/);
+      if (match) {
+        const lat = parseFloat(match[1]);
+        const lng = parseFloat(match[2]);
+        AppState.destCoords = [lat, lng];
+        AppState.destination = `لوكيشن واتساب (${lat.toFixed(3)}, ${lng.toFixed(3)})`;
+        document.getElementById('loc-dest-input').value = AppState.destination;
+        initOrUpdateRouteLeafletMap();
+        showToast('تم التقاط إحداثيات الواتساب بنجاح ✓', AppState.destination);
+      } else {
+        showToast('تنبيه رابط واتساب مختصر', 'الروابط المختصرة لا تحوي إحداثيات نصية مباشرة؛ اختر الموقع من دليل المدن والكسارات أو الصق الإحداثيات');
+      }
+      syncAllViews();
+    }
+
+    function setSiteTerrain(terrain) {
+      AppState.terrain = terrain;
+      ['paved', 'sand', 'rough'].forEach(t => {
+        const btn = document.getElementById(`terrain-btn-${t}`);
+        if (!btn) return;
+        btn.className = t === terrain
+          ? 'p-2 rounded-xl border-2 border-amber-500 bg-amber-50 font-extrabold text-slate-950'
+          : 'p-2 rounded-xl border border-slate-300 bg-white font-bold text-slate-800';
+      });
+      syncAllViews();
+    }
+
+    // Super Shortcuts Modal
+    function openSuperShortcutsModal() {
+      const modal = document.getElementById('super-shortcuts-modal');
+      const body = document.getElementById('super-shortcuts-body');
+      if (!modal || !body) return;
+      const pricing = calculatePricing();
+      body.innerHTML = `
+        <div class="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-2">
+          <div class="font-extrabold text-emerald-950">1. اختصار واتساب للمقاول (بطاقة طلب جاهزة بنقرة واحدة)</div>
+          <p class="text-slate-700 font-bold">ينسخ بطاقة الطلب الكاملة (المعدة + المحاور + المسار + موعد التحميل + جوال سائق المعدة + النولون ${pricing.total.toLocaleString('ar-SA')} ر.س + رمز OTP: ${AppState.activeOrder.otp}).</p>
+          <button onclick="copyOrderWhatsappCard()" class="px-3 py-2 rounded-xl btn-emerald-grad font-extrabold">نسخ بطاقة واتساب الآن ✓</button>
+        </div>
+        <div class="p-3 rounded-2xl bg-sky-50 border border-sky-200 space-y-2">
+          <div class="font-extrabold text-sky-950">2. اختصار تيليجرام لغرفة الحركة والردّ الراجع (-30%)</div>
+          <p class="text-slate-700 font-bold">ينشر تنبيه اللوبد العائد فارغاً في قناة تيليجرام الشركاء ليحجزه أقرب مقاول فوراً.</p>
+          <button onclick="showToast('بوت تيليجرام جاهز ⚡', 'تم بث إشعار الطلب والردّ الراجع إلى قناة الحركة')" class="px-3 py-2 rounded-xl btn-sky-grad font-extrabold">إرسال إشعار لقناة تيليجرام</button>
+        </div>
+        <div class="p-3 rounded-2xl bg-amber-50 border border-amber-200 space-y-2">
+          <div class="font-extrabold text-amber-950">3. رابط استلام مباشر لمشرف الوجهة (بدون تسجيل)</div>
+          <p class="text-slate-700 font-bold">رمز التسليم النشط: <b class="font-mono text-slate-950">${AppState.activeOrder.otp}</b> — يفتح صفحة تأكيد الاستلام والصور الأربع في 10 ثوانٍ.</p>
+          <button onclick="openBayanWaybillModal()" class="px-3 py-2 rounded-xl btn-amber-grad font-extrabold">فتح سند التسليم ورمز OTP</button>
+        </div>
+      `;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeSuperShortcutsModal() {
+      const modal = document.getElementById('super-shortcuts-modal');
+      if (!modal) return;
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    // Order Confirmation & Bids
+    function openLazyPhoneSheet() {
+      const equip = getSelectedEquipment();
+      const pricing = calculatePricing();
+      document.getElementById('modal-order-equip').textContent = `${equip.name} (${equip.weight} طن) × ${AppState.lowbedCountMultiplier}`;
+      document.getElementById('modal-order-lowbed').textContent = equip.lowbed;
+      document.getElementById('modal-order-route').textContent = `${AppState.origin} ⬅ ${AppState.destination} (${AppState.distanceKm} كم)`;
+      document.getElementById('modal-order-price').textContent = `${pricing.total.toLocaleString('ar-SA')} ر.س`;
+      const modal = document.getElementById('lazy-phone-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeLazyPhoneSheet() {
+      const modal = document.getElementById('lazy-phone-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function confirmOrderAndGoToBids() {
+      const phoneInput = document.getElementById('client-phone-input').value.trim();
+      const opPhoneInput = document.getElementById('operator-phone-input').value.trim();
+      const saudiPhoneRegex = /^(\+9665|05)\d{8}$/;
+      if (!saudiPhoneRegex.test(phoneInput)) {
+        showToast('رقم جوال غير صحيح', 'يرجى إدخال رقم جوال سعودي بصيغة 05XXXXXXXX');
+        return;
+      }
+      AppState.activeOrder.phone = phoneInput;
+      AppState.activeOrder.operatorPhone = opPhoneInput || phoneInput;
+      closeLazyPhoneSheet();
+      switchMainView('bids');
+      const slotInfo = SCHEDULE_SLOTS[AppState.loadingTimeSlot] || SCHEDULE_SLOTS.dawn;
+      showToast('تم بث الطلب للوابد المطابقة ✓', `موعد التحميل: ${slotInfo.label} — اختر عرض السائق للتعميد`);
+    }
+
+    function renderClientDriverBids() {
+      const container = document.getElementById('client-driver-bids-list');
+      const countEl = document.getElementById('nav-bids-count');
+      if (countEl) countEl.textContent = AppState.driverBids.length;
+      if (!container) return;
+
+      const slotInfo = SCHEDULE_SLOTS[AppState.loadingTimeSlot] || SCHEDULE_SLOTS.dawn;
+      const ctxEl = document.getElementById('bids-order-context');
+      if (ctxEl) {
+        ctxEl.textContent = `طلب ${AppState.activeOrder.id} • التحميل: ${slotInfo.label} • مفتاح المعدة: ${AppState.activeOrder.operatorPhone}`;
+      }
+
+      container.innerHTML = AppState.driverBids.map(bid => {
+        const bidPricing = calculatePricing(bid.delta);
+        const isSelected = AppState.activeOrder.selectedBidId === bid.id;
+        return `
+          <div class="p-3.5 rounded-2xl border-2 ${isSelected ? 'border-emerald-500 bg-emerald-50/50' : 'border-slate-200 bg-white'} flex flex-wrap items-center justify-between gap-2 shadow-sm">
+            <div class="space-y-1">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="font-extrabold text-xs text-slate-950">${bid.driverName}</span>
+                ${bid.fastBadge ? '<span class="px-2 py-0.5 rounded-lg bg-amber-100 text-amber-900 text-[10px] font-extrabold">⚡ ردّ سريع</span>' : ''}
+                <span class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-800 text-[10px] font-bold">${bid.rating}</span>
+              </div>
+              <div class="text-[11px] font-bold text-slate-600">اللوبد: ${bid.lowbed} • لوحة: <span class="font-mono">${bid.plate}</span></div>
+              <div class="flex flex-wrap items-center gap-2 text-[11px]">
+                <span class="font-extrabold text-emerald-800">إجمالي النولون: ${bidPricing.total.toLocaleString('ar-SA')} ر.س</span>
+                <span class="text-slate-500 font-bold">| عربون التعميد: ${bidPricing.depositAmount} ر.س</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button
+                type="button"
+                onclick="selectBidForPayment('${bid.id}')"
+                class="px-4 py-2 rounded-xl btn-emerald-grad font-extrabold text-xs shadow-sm"
+              >
+                تعميد اللوبد ⬅
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function selectBidForPayment(bidId) {
+      const bid = AppState.driverBids.find(b => b.id === bidId);
+      if (!bid) return;
+      AppState.activeOrder.selectedBidId = bid.id;
+      AppState.activeOrder.driverName = bid.driverName;
+      AppState.activeOrder.driverPlate = bid.plate;
+      AppState.activeOrder.driverIban = bid.iban;
+      AppState.driverBidDelta = bid.delta;
+      openPaymentSettlementModal();
+    }
+
+    // Custom Equipment Modal
+    function openAddCustomEquipmentModal() {
+      const modal = document.getElementById('custom-equip-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      updateCustomEquipPreview();
+    }
+
+    function closeAddCustomEquipmentModal() {
+      const modal = document.getElementById('custom-equip-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function setQuickCustomWeight(w) {
+      document.getElementById('custom-weight-slider').value = w;
+      updateCustomEquipPreview();
+    }
+
+    function setCustomMoveType(type) {
+      AppState.customMoveType = type;
+      ['tracked', 'wheeled', 'static'].forEach(t => {
+        const btn = document.getElementById(`cust-move-${t}`);
+        if (!btn) return;
+        btn.className = t === type
+          ? 'p-2 rounded-xl border-2 border-amber-500 bg-amber-50 font-extrabold text-slate-950'
+          : 'p-2 rounded-xl border border-slate-300 bg-white font-bold text-slate-800';
+      });
+      updateCustomEquipPreview();
+    }
+
+    function handleCustomEquipPhotoUpload(event) {
+      const file = event.target && event.target.files && event.target.files[0];
+      if (!file) return;
+      if (AppState.customPhotoUrl && AppState.customPhotoUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(AppState.customPhotoUrl);
+      }
+      AppState.customPhotoUrl = URL.createObjectURL(file);
+      document.getElementById('custom-equip-thumb-preview').src = AppState.customPhotoUrl;
+    }
+
+    function simulateAiCameraEquipmentScan() {
+      setQuickCustomWeight(42);
+      document.getElementById('custom-equip-name').value = 'بوكلين 42 طن (معاينة ذكية)';
+      updateCustomEquipPreview();
+      showToast('تمت المعاينة بالكاميرا 📸', 'الوزن التقديري 42 طن — يطابق لوبد 3 محاور رقبة هيدروليك RGN');
+    }
+
+    function updateCustomEquipPreview() {
+      const w = Number(document.getElementById('custom-weight-slider').value || 36);
+      document.getElementById('custom-weight-display').textContent = `${w} طن`;
+      const lowbed = w > 55 ? 'لوبد ثقيل 4 محاور (حتى 80 طن)' : w > 30 ? 'لوبد 3 محاور رقبة هيدروليك RGN' : 'لوبد محورين عادي (حتى 35 طن)';
+      document.getElementById('custom-engineering-preview').textContent = `اللوبد المطابق: ${lowbed}`;
+    }
+
+    function saveAndSelectCustomEquipment() {
+      const rawName = (document.getElementById('custom-equip-name').value || '').trim() || 'معدة مضافة';
+      const w = Number(document.getElementById('custom-weight-slider').value || 36);
+      const axles = w > 55 ? '4 محاور ثقيل' : w > 30 ? '3 محاور RGN' : 'محورين';
+      const lowbed = w > 55 ? 'لوبد ثقيل 4 محاور (حتى 80 طن)' : w > 30 ? 'لوبد 3 محاور رقبة هيدروليك RGN' : 'لوبد محورين عادي (حتى 35 طن)';
+      const newId = `custom-${Date.now()}`;
+      EQUIPMENT_CATALOG.unshift({
+        id: newId,
+        name: rawName,
+        shortName: rawName.slice(0, 15),
+        cat: 'other',
+        weight: w,
+        widthM: 3.0,
+        move: AppState.customMoveType,
+        lowbed,
+        axles,
+        icon: '📸'
+      });
+      AppState.selectedEquipId = newId;
+      closeAddCustomEquipmentModal();
+      syncAllViews();
+      showToast('تمت إضافة المعدة بنجاح ✓', `${rawName} (${w} طن)`);
+    }
+
+    // Flexible Waybill & ZATCA Disclosed Agent Invoice Modal
+    function openBayanWaybillModal() {
+      const modal = document.getElementById('bayan-waybill-modal');
+      const body = document.getElementById('bayan-waybill-body');
+      const equip = getSelectedEquipment();
+      const pricing = calculatePricing();
+      const slotInfo = SCHEDULE_SLOTS[AppState.loadingTimeSlot] || SCHEDULE_SLOTS.dawn;
+      const longHaulWarn = AppState.distanceKm > 100
+        ? `<div class="p-2.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 font-bold text-[11px]">⚠️ تنبيه خط طويل (${AppState.distanceKm} كم): يُنصح بإرفاق رقم وثيقة «بيان» لتفادي تأخير اللوبد في نقاط التفتيش ومحطات الوزن.</div>`
+        : `<div class="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950 font-bold text-[11px]">✓ نقلة قريبة (${AppState.distanceKm} كم): يكفي سند التسليم الرقمي بالصور الأربع ورمز OTP.</div>`;
+
+      body.innerHTML = `
+        ${longHaulWarn}
+        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="font-extrabold text-slate-950 text-xs">سند النقل والتسليم الرقمي — ${AppState.activeOrder.id}</span>
+            <span class="px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-900 font-extrabold text-[10px]">${AppState.activeOrder.tripCompleted ? 'مكتمل وتم التسليم ✓' : 'توثيق 4 زوايا + OTP'}</span>
+          </div>
+          <div>المعدة: <b>${equip.name} (${equip.weight} طن)</b></div>
+          <div>الناقل: <b>${AppState.activeOrder.driverName}</b> — لوحة: <b>${AppState.activeOrder.driverPlate}</b></div>
+          <div>المسار: <b>${AppState.origin} ⬅ ${AppState.destination} (${AppState.distanceKm} كم)</b> • التحميل: <b>${slotInfo.label}</b></div>
+          <div>مسؤول تسليم مفتاح المعدة بالموقع: <b class="font-mono">${AppState.activeOrder.operatorPhone}</b> (${AppState.activeOrder.needsGatePermit ? 'يتطلب تصريح بوابة أمني' : 'موقع مفتوح'})</div>
+          <div>رمز تأكيد التسليم في الوجهة (OTP): <b class="font-mono text-sm text-emerald-800">${AppState.activeOrder.otp}</b></div>
+        </div>
+
+        <div class="p-3.5 rounded-2xl bg-sky-50 border border-sky-200 space-y-2">
+          <div class="font-extrabold text-sky-950">وثيقة بوابة «بيان» — الهيئة العامة للنقل (اختيارية / مكمّلة)</div>
+          <div class="flex gap-2">
+            <input id="bayan-doc-input" type="text" value="${AppState.bayanOptionalNumber}" placeholder="أدخل رقم وثيقة بيان إن وجدت (مثال: BYN-2026-9941)" class="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-1.5 font-bold" />
+            <button onclick="saveBayanOptionalNumber()" class="px-3 py-1.5 rounded-xl btn-sky-grad font-extrabold">حفظ بالسند</button>
+          </div>
+        </div>
+
+        <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-1">
+          <div class="font-extrabold text-emerald-950">الفاتورة الضريبية المبسطة (ZATCA — نموذج الوكيل المفصح)</div>
+          <div class="text-[11px] text-slate-700">تُحتسب ضريبة القيمة المضافة (15%) على سعي المنصة فقط لحماية المقاول والسائق:</div>
+          <div class="pt-1 font-bold">سعي المنصة: <b>${pricing.commission} ر.س</b> + ضريبة 15%: <b>${pricing.vatOnCommission} ر.س</b> = إجمالي عربون التعميد: <b>${pricing.depositAmount} ر.س</b></div>
+          <div class="font-bold">صافي النولون المستحق لراعي اللوبد: <b>${pricing.driverNetPayout.toLocaleString('ar-SA')} ر.س</b></div>
+        </div>
+
+        <div class="flex justify-end gap-2">
+          <button onclick="copyOrderWhatsappCard()" class="px-4 py-2 rounded-xl btn-emerald-grad font-extrabold">
+            <i class="fa-brands fa-whatsapp ml-1"></i>مشاركة السند عبر واتساب
+          </button>
+        </div>
+      `;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function saveBayanOptionalNumber() {
+      const inp = document.getElementById('bayan-doc-input');
+      if (inp) AppState.bayanOptionalNumber = inp.value.trim();
+      showToast('تم تحديث سند النقل ✓', AppState.bayanOptionalNumber ? `تم إرفاق وثيقة بيان: ${AppState.bayanOptionalNumber}` : 'يعمل السند بصور الزوايا الأربع ورمز OTP');
+    }
+
+    function closeBayanWaybillModal() {
+      const modal = document.getElementById('bayan-waybill-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    // Payment Settlement Modal
+    function openPaymentSettlementModal() {
+      const modal = document.getElementById('payment-settlement-modal');
+      const pricing = calculatePricing();
+      document.getElementById('pay-modal-driver-name').textContent = `${AppState.activeOrder.driverName} • لوحة ${AppState.activeOrder.driverPlate}`;
+      document.getElementById('pay-deposit-now-val').textContent = `${pricing.depositAmount} ر.س`;
+      document.getElementById('pay-driver-rem-val').textContent = `${pricing.driverNetPayout.toLocaleString('ar-SA')} ر.س`;
+      document.getElementById('pay-driver-iban-text').textContent = AppState.activeOrder.driverIban;
+      document.getElementById('pay-full-escrow-val').textContent = `${pricing.total.toLocaleString('ar-SA')} ر.س`;
+      document.getElementById('pay-virtual-iban-text').textContent = 'SA66 8000 0000 9999 0000 8841';
+      document.getElementById('pay-confirm-main-btn-text').textContent = `دفع عربون التعميد (${pricing.depositAmount} ر.س) وتعميد اللوبد ✓`;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closePaymentSettlementModal() {
+      const modal = document.getElementById('payment-settlement-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function selectSettlementMethod(method) {
+      AppState.settlementMethod = method;
+      const depBox = document.getElementById('pay-mode-deposit-box');
+      const escBox = document.getElementById('pay-mode-escrow-box');
+      const tabDep = document.getElementById('pay-tab-deposit');
+      const tabEsc = document.getElementById('pay-tab-escrow');
+      if (method === 'deposit') {
+        depBox.classList.remove('hidden');
+        escBox.classList.add('hidden');
+        tabDep.className = 'py-2 px-2 rounded-xl font-extrabold bg-white text-slate-950 shadow-sm';
+        tabEsc.className = 'py-2 px-2 rounded-xl font-bold text-slate-700';
+      } else {
+        depBox.classList.add('hidden');
+        escBox.classList.remove('hidden');
+        tabEsc.className = 'py-2 px-2 rounded-xl font-extrabold bg-white text-slate-950 shadow-sm';
+        tabDep.className = 'py-2 px-2 rounded-xl font-bold text-slate-700';
+      }
+    }
+
+    function setDriverTransferTiming(timing) {
+      AppState.driverTransferTiming = timing;
+      document.getElementById('timing-btn-lashing').className = timing === 'on_lashing'
+        ? 'p-2 rounded-xl border-2 border-amber-500 bg-white font-extrabold text-slate-950 text-[11px] text-right'
+        : 'p-2 rounded-xl border border-slate-300 bg-white/70 font-bold text-slate-800 text-[11px] text-right';
+      document.getElementById('timing-btn-split').className = timing === 'split_50_50'
+        ? 'p-2 rounded-xl border-2 border-amber-500 bg-white font-extrabold text-slate-950 text-[11px] text-right'
+        : 'p-2 rounded-xl border border-slate-300 bg-white/70 font-bold text-slate-800 text-[11px] text-right';
+    }
+
+    function finalizeCommissionAndConfirmDriver() {
+      AppState.activeOrder.depositPaid = true;
+      AppState.tripStage = 2;
+      closePaymentSettlementModal();
+      showToast('تم تعميد اللوبد بنجاح ✓', `رمز التسليم OTP: ${AppState.activeOrder.otp} — تم إشعار السائق للتحرك`);
+      if (AppState.currentView !== 'dual') {
+        switchMainView('driver');
+      } else {
+        syncAllViews();
+      }
+    }
+
+    // Account & Apple Store Compliance Modal
+    function openAccountComplianceModal() {
+      const modal = document.getElementById('account-compliance-modal');
+      const phoneEl = document.getElementById('acc-modal-phone');
+      if (phoneEl) phoneEl.textContent = AppState.activeOrder.phone;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeAccountComplianceModal() {
+      const modal = document.getElementById('account-compliance-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function triggerDeleteAccountFlow() {
+      closeAccountComplianceModal();
+      showToast('تم تنفيذ طلب حذف الحساب وبيانات الجلسة ✓', 'متوافق مع البند 5.1.1(v) في Apple App Store و Google Play');
+    }
+
+    // Driver Onboarding Modal (4 Languages — No Bengali)
+    function openDriverOnboardingModal() {
+      const modal = document.getElementById('driver-onboarding-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeDriverOnboardingModal() {
+      const modal = document.getElementById('driver-onboarding-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function selectOnboardingLang(lang) {
+      AppState.onboardLang = lang === 'bn' ? 'ar' : lang;
+      ['ar', 'ur', 'hi', 'en'].forEach(l => {
+        const btn = document.getElementById(`onb-lang-${l}`);
+        if (!btn) return;
+        btn.className = l === AppState.onboardLang
+          ? 'px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-amber-400 text-slate-950'
+          : 'px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white border border-slate-300';
+      });
+    }
+
+    function selectOnboardingLowbedType(type) {
+      AppState.onboardType = type;
+      ['2axles', '3axles_rgn', '4axles_heavy'].forEach(t => {
+        const btn = document.getElementById(`onb-type-${t}`);
+        if (!btn) return;
+        btn.className = t === type
+          ? 'p-2.5 rounded-2xl border-2 border-amber-500 bg-amber-50 text-center space-y-1 font-extrabold'
+          : 'p-2.5 rounded-2xl border border-slate-300 bg-white text-center space-y-1 font-bold';
+      });
+    }
+
+    function toggleOnboardingGear(gear) {
+      AppState.onboardGear[gear] = !AppState.onboardGear[gear];
+      const btn = document.getElementById(`gear-btn-${gear}`);
+      if (!btn) return;
+      btn.className = AppState.onboardGear[gear]
+        ? 'px-2.5 py-1 rounded-xl border border-emerald-500 bg-emerald-50 text-emerald-950 text-[11px] font-extrabold'
+        : 'px-2.5 py-1 rounded-xl border border-slate-300 bg-white text-slate-800 text-[11px] font-bold';
+    }
+
+    function selectOnboardingMode(mode) {
+      AppState.onboardMode = mode;
+      document.getElementById('onb-mode-ready').className = mode === 'ready'
+        ? 'p-2 rounded-xl border-2 border-emerald-600 bg-white font-extrabold text-slate-950 text-[11px]'
+        : 'p-2 rounded-xl border border-slate-300 bg-white/70 font-bold text-slate-800 text-[11px]';
+      document.getElementById('onb-mode-backhaul').className = mode === 'backhaul'
+        ? 'p-2 rounded-xl border-2 border-emerald-600 bg-white font-extrabold text-slate-950 text-[11px]'
+        : 'p-2 rounded-xl border border-slate-300 bg-white/70 font-bold text-slate-800 text-[11px]';
+    }
+
+    function completeDriverQuickOnboarding() {
+      const name = (document.getElementById('onboard-driver-name').value || '').trim() || 'راعي لوبد شريك';
+      const plate = (document.getElementById('onboard-plate-no').value || '').trim() || 'أ ب ج 4820';
+      const iban = (document.getElementById('onboard-iban-input').value || '').trim() || 'SA88 8000 0000 6080 1199 4410';
+      const typeLabel = AppState.onboardType === '4axles_heavy' ? '4 محاور ثقيل' : AppState.onboardType === '2axles' ? 'محورين عادي' : '3 محاور رقبة RGN';
+      AppState.driverBids.unshift({
+        id: `bid-${Date.now()}`,
+        driverName: name,
+        plate,
+        lowbed: typeLabel,
+        rating: '5.0 ★ (شريك مؤسس)',
+        fastBadge: true,
+        delta: AppState.onboardMode === 'backhaul' ? -250 : 0,
+        iban
+      });
+      closeDriverOnboardingModal();
+      syncAllViews();
+      showToast('تم تفعيل اللوبد في المنصة ✓', `${name} • 0% سعي لأول 5 ردّات`);
+    }
+
+    // Full 4-Language Driver View Renderer (Including Demurrage Timer + OTP Closure & Rating)
+    function renderDriverView() {
+      const container = document.getElementById('driver-mission-container');
+      if (!container) return;
+      const t = DRIVER_I18N[AppState.driverLang] || DRIVER_I18N.ar;
+      const equip = getSelectedEquipment();
+      const pricing = calculatePricing();
+      const photosDone = AppState.cornerPhotos.filter(Boolean).length;
+      const lashingDone = AppState.lashingChecks.filter(Boolean).length;
+      const canMove = photosDone === 4 && lashingDone === 4;
+      const slotInfo = SCHEDULE_SLOTS[AppState.loadingTimeSlot] || SCHEDULE_SLOTS.dawn;
+
+      const langButtons = [
+        { code: 'ar', label: '🇸🇦 عربي' },
+        { code: 'ur', label: '🇵🇰 اردو' },
+        { code: 'hi', label: '🇮🇳 हिन्दी' },
+        { code: 'en', label: '🇬🇧 EN' }
+      ];
+
+      container.innerHTML = `
+        <div dir="${t.dir}" class="space-y-2.5">
+          <!-- Driver Header & 4-Language Bar -->
+          <div class="btn-dark-grad text-white p-3.5 rounded-2xl space-y-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div class="text-xs font-extrabold text-amber-300">${t.headerTitle}</div>
+                <div class="text-[11px] font-bold text-slate-200 mt-0.5">${AppState.activeOrder.driverName} • ${AppState.activeOrder.driverPlate}</div>
+              </div>
+              <div class="flex flex-wrap gap-1">
+                ${langButtons.map(lb => `
+                  <button
+                    type="button"
+                    onclick="setDriverLang('${lb.code}')"
+                    class="px-2 py-1 rounded-lg text-[10px] font-extrabold transition ${
+                      AppState.driverLang === lb.code ? 'bg-amber-400 text-slate-950 shadow-sm' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                    }"
+                  >${lb.label}</button>
+                `).join('')}
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-700 text-[11px]">
+              <span>${equip.icon || '🚜'} <b>${equip.name} (${equip.weight}T)</b></span>
+              <span class="text-amber-300 font-extrabold">${AppState.origin} ⬅ ${AppState.destination} (${AppState.distanceKm} KM)</span>
+            </div>
+            <!-- Schedule & Site Key Operator Info Strip -->
+            <div class="flex flex-wrap items-center justify-between gap-1.5 pt-1 text-[10px] text-slate-300">
+              <span class="px-2 py-0.5 rounded bg-slate-800 text-sky-300 font-extrabold">${slotInfo.label}</span>
+              <span class="px-2 py-0.5 rounded bg-slate-800 text-emerald-300 font-bold">🔑 ${AppState.activeOrder.operatorPhone}</span>
+              <span class="px-2 py-0.5 rounded bg-slate-800 text-amber-200 font-bold">${AppState.activeOrder.needsGatePermit ? '🪪 تصريح بوابة أمني' : '🟢 بوابة مفتوحة'}</span>
+            </div>
+          </div>
+
+          <!-- Net Freight & 3 Zero-Keyboard Bid Buttons -->
+          <div class="p-3 rounded-2xl bg-emerald-50 border-2 border-emerald-200 space-y-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div class="text-[11px] font-bold text-slate-700">${t.netPayoutLabel}</div>
+                <div class="text-base font-extrabold text-emerald-900">${pricing.driverNetPayout.toLocaleString('ar-SA')} SAR</div>
+              </div>
+              <div class="px-2.5 py-1 rounded-xl bg-white border border-emerald-300 text-[11px] font-extrabold text-slate-900">
+                ${t.otpLabel} <span class="font-mono text-emerald-800">${AppState.activeOrder.otp}</span>
+              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-1.5 pt-1">
+              <button type="button" onclick="setDriverBidDelta(0)" class="py-2 px-2 rounded-xl text-[11px] font-extrabold ${AppState.driverBidDelta === 0 ? 'btn-emerald-grad shadow-sm' : 'bg-white border border-slate-300 text-slate-800'}">${t.bidAccept}</button>
+              <button type="button" onclick="setDriverBidDelta(150)" class="py-2 px-2 rounded-xl text-[11px] font-extrabold ${AppState.driverBidDelta === 150 ? 'btn-amber-grad shadow-sm' : 'bg-white border border-slate-300 text-slate-800'}">${t.bidPlus150}</button>
+              <button type="button" onclick="setDriverBidDelta(300)" class="py-2 px-2 rounded-xl text-[11px] font-extrabold ${AppState.driverBidDelta === 300 ? 'btn-amber-grad shadow-sm' : 'bg-white border border-slate-300 text-slate-800'}">${t.bidPlus300}</button>
+            </div>
+          </div>
+
+          <!-- NEW FEATURE 4: 2-Hour Free Waiting / Demurrage Timer Box -->
+          <div class="p-2.5 rounded-2xl ${AppState.demurrageActive ? 'bg-amber-50 border-2 border-amber-400' : 'bg-slate-50 border border-slate-200'} flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div class="text-[11px] font-extrabold text-slate-900">${t.demurrageTitle}</div>
+              <div class="text-[10px] font-bold text-slate-600">${t.demurrageRule}</div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span id="driver-demurrage-countdown" class="font-mono font-extrabold text-xs px-2.5 py-1 rounded-xl bg-white border border-slate-300 text-slate-950">
+                ${formatCountdown(AppState.demurrageSecondsRemaining)}
+              </span>
+              <button
+                type="button"
+                onclick="toggleDemurrageTimer()"
+                class="px-2.5 py-1.5 rounded-xl text-[10px] font-extrabold ${AppState.demurrageActive ? 'bg-rose-600 text-white' : 'bg-slate-900 text-amber-300'}"
+              >
+                ${AppState.demurrageActive ? '⏸ إيقاف' : t.demurrageStartBtn}
+              </button>
+            </div>
+          </div>
+
+          <!-- 4-Corner Pre-Load Photos & Lashing Checklist -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div class="p-3 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="font-extrabold text-[11px] text-slate-900">${t.step1Title} (${photosDone}/4)</span>
+                <button type="button" onclick="completeAllSafetyChecks()" class="text-[10px] font-extrabold text-sky-700 hover:underline">${t.quickComplete}</button>
+              </div>
+              <div class="grid grid-cols-2 gap-1.5">
+                ${t.corners.map((label, idx) => `
+                  <button
+                    type="button"
+                    onclick="toggleCornerPhoto(${idx})"
+                    class="p-2 rounded-xl border text-[11px] font-extrabold transition flex items-center justify-between ${
+                      AppState.cornerPhotos[idx]
+                        ? 'border-emerald-500 bg-emerald-100/80 text-emerald-950'
+                        : 'border-slate-300 bg-white text-slate-700'
+                    }"
+                  >
+                    <span>${label}</span>
+                    <span>${AppState.cornerPhotos[idx] ? '✅' : '📷'}</span>
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+
+            <div class="p-3 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-2">
+              <div class="font-extrabold text-[11px] text-slate-900">${t.step2Title} (${lashingDone}/4)</div>
+              <div class="grid grid-cols-1 gap-1.5">
+                ${t.lashing.map((label, idx) => `
+                  <button
+                    type="button"
+                    onclick="toggleLashingCheck(${idx})"
+                    class="px-2.5 py-1.5 rounded-xl border text-[11px] font-extrabold transition flex items-center justify-between ${
+                      AppState.lashingChecks[idx]
+                        ? 'border-emerald-500 bg-emerald-100/80 text-emerald-950'
+                        : 'border-slate-300 bg-white text-slate-700'
+                    }"
+                  >
+                    <span>${label}</span>
+                    <span>${AppState.lashingChecks[idx] ? '✓' : '🔗'}</span>
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+
+          <!-- 1-Tap Translated Quick Status Messages -->
+          <div class="p-2.5 rounded-2xl bg-slate-100 border border-slate-200 space-y-1.5">
+            <div class="text-[10px] font-extrabold text-slate-700">${t.quickMsgTitle}</div>
+            <div class="grid grid-cols-2 gap-1.5">
+              ${t.quickMsgs.map((msg, idx) => `
+                <button
+                  type="button"
+                  onclick="sendQuickDriverStatusMsg('${msg}', ${idx})"
+                  class="p-1.5 rounded-xl bg-white hover:bg-amber-50 border border-slate-200 text-[10px] font-extrabold text-slate-800 truncate"
+                >${msg}</button>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- Safety-Locked Start Trip Button -->
+          <button
+            type="button"
+            onclick="startDriverMission()"
+            class="w-full py-2.5 rounded-2xl font-extrabold text-xs transition ${
+              canMove ? 'btn-emerald-grad shadow-md' : 'bg-slate-200 text-slate-600'
+            }"
+          >
+            ${canMove ? t.startReady : t.startLocked}
+          </button>
+
+          <!-- NEW FEATURE 3: Step 3 Delivery OTP Verification & Trip Closure + 5-Star Rating -->
+          <div class="p-3 rounded-2xl ${AppState.activeOrder.tripCompleted ? 'bg-emerald-100 border-2 border-emerald-500' : 'bg-sky-50 border border-sky-200'} space-y-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="font-extrabold text-[11px] text-slate-950">${t.step3ClosureTitle}</span>
+              <div class="flex items-center gap-1">
+                ${[1, 2, 3, 4, 5].map(star => `
+                  <button type="button" onclick="setDriverRatingStars(${star})" class="text-sm ${star <= AppState.driverRatingStars ? 'text-amber-500' : 'text-slate-300'}">★</button>
+                `).join('')}
+              </div>
+            </div>
+            ${
+              AppState.activeOrder.tripCompleted
+                ? `<div class="p-2 rounded-xl bg-white text-emerald-900 font-extrabold text-xs text-center">${t.tripCompletedBadge}</div>`
+                : `
+                  <div class="flex gap-2">
+                    <input id="driver-otp-verify-input" type="text" value="${AppState.activeOrder.otp}" class="w-24 bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 font-mono font-extrabold text-center text-xs" />
+                    <button type="button" onclick="verifyOtpAndCompleteMission()" class="flex-1 py-2 px-3 rounded-xl btn-sky-grad font-extrabold text-[11px] shadow-sm">
+                      ${t.otpConfirmBtn}
+                    </button>
+                  </div>
+                `
+            }
+          </div>
+        </div>
+      `;
+    }
+
+    function setDriverLang(lang) {
+      AppState.driverLang = lang === 'bn' ? 'ar' : lang;
+      renderDriverView();
+    }
+
+    function setDriverBidDelta(delta) {
+      AppState.driverBidDelta = delta;
+      syncAllViews();
+    }
+
+    function toggleCornerPhoto(idx) {
+      AppState.cornerPhotos[idx] = !AppState.cornerPhotos[idx];
+      syncAllViews();
+    }
+
+    function toggleLashingCheck(idx) {
+      AppState.lashingChecks[idx] = !AppState.lashingChecks[idx];
+      syncAllViews();
+    }
+
+    function completeAllSafetyChecks() {
+      AppState.cornerPhotos = [true, true, true, true];
+      AppState.lashingChecks = [true, true, true, true];
+      if (AppState.tripStage < 3) AppState.tripStage = 3;
+      syncAllViews();
+      showToast('اكتمل توثيق الأمان 4/4 ✓', 'تم فتح قفل الحركة وتحديث شريط التتبع لدى المقاول');
+    }
+
+    function sendQuickDriverStatusMsg(msg, idx) {
+      if (idx === 0) {
+        toggleDemurrageTimer(true);
+      } else if (idx === 2) {
+        completeAllSafetyChecks();
+        AppState.tripStage = 4;
+        syncAllViews();
+      }
+      showToast('تم إرسال حالة السائق للمقاول ⚡', msg);
+    }
+
+    function startDriverMission() {
+      const ok = AppState.cornerPhotos.every(Boolean) && AppState.lashingChecks.every(Boolean);
+      if (!ok) {
+        showToast('قفل الأمان نشط 🔒', 'يلزم إكمال 4 صور لزوايا المعدة و 4 فحوصات للزراجين قبل التحرك');
+        return;
+      }
+      AppState.tripStage = 4;
+      syncAllViews();
+      showToast('انطلق اللوبد بأمان 🚛', 'حالة الطلب الآن: على الطريق (تتبع GPS نشط)');
+    }
+
+    function setDriverRatingStars(stars) {
+      AppState.driverRatingStars = stars;
+      renderDriverView();
+    }
+
+    function verifyOtpAndCompleteMission() {
+      const ok = AppState.cornerPhotos.every(Boolean) && AppState.lashingChecks.every(Boolean);
+      if (!ok) {
+        completeAllSafetyChecks();
+      }
+      AppState.activeOrder.tripCompleted = true;
+      AppState.tripStage = 5;
+      AppState.demurrageActive = false;
+      clearInterval(demurrageInterval);
+      syncAllViews();
+      showToast('تم إغلاق الرحلة وتأكيد التسليم (OTP: 4829) 🏁', `تم تحرير النولون وتقييم المقاول بـ ${AppState.driverRatingStars} نجوم`);
+    }
+
+    // Rich Admin & Dispatch Control Room + Field Marketing Messages
+    function renderAdminDashboard() {
+      const container = document.getElementById('admin-dashboard-container');
+      if (!container) return;
+      const equip = getSelectedEquipment();
+      const pricing = calculatePricing();
+      const safetyOk = AppState.cornerPhotos.every(Boolean) && AppState.lashingChecks.every(Boolean);
+      const slotInfo = SCHEDULE_SLOTS[AppState.loadingTimeSlot] || SCHEDULE_SLOTS.dawn;
+
+      container.innerHTML = `
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
+          <div>
+            <h2 class="font-extrabold text-sm text-slate-950">غرفة التحكم ومكتب الحركة (Firebase me-central2 Dammam)</h2>
+            <p class="text-[11px] font-bold text-slate-600">مراقبة الطلبات، المواعيد، جاهزية البوابات، وحقيبة التسويق الميداني</p>
+          </div>
+          <button
+            type="button"
+            onclick="togglePilotZeroCommission()"
+            class="px-3 py-1.5 rounded-xl font-extrabold text-[11px] ${
+              AppState.isPilotZeroCommission ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-amber-300'
+            }"
+          >
+            ${AppState.isPilotZeroCommission ? '✓ وضع التجربة المجاني (0% سعي) مفعّل' : 'تفعيل وضع التجربة (0% سعي)'}
+          </button>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+            <div class="text-[10px] font-bold text-slate-500">الطلب النشط والوقت</div>
+            <div class="text-sm font-extrabold text-slate-950">${AppState.activeOrder.id}</div>
+            <div class="text-[10px] font-bold text-emerald-700">${slotInfo.label}</div>
+          </div>
+          <div class="p-3 rounded-2xl bg-amber-50/70 border border-amber-200">
+            <div class="text-[10px] font-bold text-slate-600">إجمالي النولون</div>
+            <div class="text-sm font-extrabold text-amber-900">${pricing.total.toLocaleString('ar-SA')} ر.س</div>
+            <div class="text-[10px] font-bold text-slate-600">${AppState.distanceKm} كم × ${AppState.lowbedCountMultiplier}</div>
+          </div>
+          <div class="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200">
+            <div class="text-[10px] font-bold text-slate-600">سعي المنصة + الضريبة</div>
+            <div class="text-sm font-extrabold text-emerald-900">${pricing.depositAmount} ر.س</div>
+            <div class="text-[10px] font-bold text-slate-600">السعي الصافي: ${pricing.commission} ر.س</div>
+          </div>
+          <div class="p-3 rounded-2xl bg-sky-50/70 border border-sky-200">
+            <div class="text-[10px] font-bold text-slate-600">حالة الردّة والأمان</div>
+            <div class="text-sm font-extrabold ${AppState.activeOrder.tripCompleted ? 'text-emerald-700' : safetyOk ? 'text-sky-800' : 'text-amber-700'}">
+              ${AppState.activeOrder.tripCompleted ? 'تم التسليم ✓' : safetyOk ? 'مكتمل 4/4 ✓' : 'قيد التوثيق'}
+            </div>
+            <div class="text-[10px] font-bold text-slate-600">مفتاح المعدة: ${AppState.activeOrder.operatorPhone}</div>
+          </div>
+        </div>
+
+        <!-- Active Fleet & Bids Table -->
+        <div class="p-3 rounded-2xl border border-slate-200 bg-white space-y-2">
+          <div class="font-extrabold text-xs text-slate-950">اللوابد المسجلة والعروض النشطة (${AppState.driverBids.length})</div>
+          <div class="space-y-1.5">
+            ${AppState.driverBids.map(b => `
+              <div class="p-2 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                <div><b>${b.driverName}</b> • ${b.lowbed} • لوحة: <span class="font-mono">${b.plate}</span></div>
+                <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-extrabold">${b.rating}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Quick Copy Field Marketing Kit -->
+        <div class="p-3 rounded-2xl bg-gradient-to-l from-amber-50 to-sky-50 border border-amber-200 space-y-2">
+          <div class="font-extrabold text-xs text-slate-950">📢 نسخ رسائل التسويق الميدانية الجاهزة (بضغطة زر):</div>
+          <div class="flex flex-wrap gap-1.5">
+            <button onclick="copyMarketingTemplate('contractor')" class="px-3 py-1.5 rounded-xl bg-white border border-slate-300 font-extrabold text-[11px] hover:bg-amber-100">👷‍♂️ رسالة للمقاولين</button>
+            <button onclick="copyMarketingTemplate('driver')" class="px-3 py-1.5 rounded-xl bg-white border border-slate-300 font-extrabold text-[11px] hover:bg-emerald-100">🚛 رسالة لملاك اللوابد (0% سعي)</button>
+            <button onclick="copyMarketingTemplate('rental')" class="px-3 py-1.5 rounded-xl bg-white border border-slate-300 font-extrabold text-[11px] hover:bg-sky-100">🚜 رسالة لمكاتب التأجير والورش</button>
+            <button onclick="copyMarketingTemplate('haraj')" class="px-3 py-1.5 rounded-xl bg-slate-900 text-amber-300 font-extrabold text-[11px]">📋 نص إعلان حراج</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function togglePilotZeroCommission() {
+      AppState.isPilotZeroCommission = !AppState.isPilotZeroCommission;
+      const badge = document.getElementById('header-pilot-badge');
+      if (badge) {
+        badge.textContent = AppState.isPilotZeroCommission ? 'وضع التجربة: 0% سعي' : 'سقف السعي 250 ر.س';
+      }
+      syncAllViews();
+      showToast(
+        AppState.isPilotZeroCommission ? 'تم تفعيل وضع التجربة (0% سعي) ✓' : 'تم تفعيل السعي المتدرج (بسقف 250 ر.س)',
+        'تحديث فوري في جميع الشاشات'
+      );
+    }
+
+    function copyMarketingTemplate(type) {
+      const templates = {
+        contractor: `السلام عليكم يا بشمهندس، وفرنا في منصة اللوابد حاسبة نولون فورية وحجز لوابد (محورين و3 و4 محاور RGN) بـ 3 لمسات بدون تسجيل مسبق، مع خصم 30% للردّ الراجع وتوثيق المعدة بـ 4 صور قبل التحرك.`,
+        driver: `حياك الله يا راعي اللوبد 🚛 سجّل لوبدك مجاناً في 60 ثانية بدون شحن محفظة، واستقبل طلبات المقاولين الجادة مع 0% سعي لأول 5 ردّات وسقف ثابت لا يتجاوز 250 ر.س للخطوط الطويلة!`,
+        rental: `السلام عليكم، خصصنا لمكتبكم شراكة أولوية في منصة اللوابد لتوفير اللوبد المطابق لعملائكم خلال دقائق مع توثيق 4 زوايا ومكافأة إحالة فورية 50 ر.س عن كل نقلة.`,
+        haraj: `نقل معدات ثقيلة باللوابد (محورين و3 محاور رقبة هيدروليك RGN و4 محاور ثقيل) + ونش سحب للمعدات العطلانة + خصم 30% في الردّ الراجع وتوثيق الزوايا الأربع قبل التحرك.`
+      };
+      copyTextToClipboard(templates[type] || templates.contractor, 'تم نسخ الرسالة التسويقية ✓', 'جاهزة للصق في واتساب أو حراج');
+    }
+
+    function syncAllViews() {
+      const equip = getSelectedEquipment();
+      const pricing = calculatePricing();
+      const slotInfo = SCHEDULE_SLOTS[AppState.loadingTimeSlot] || SCHEDULE_SLOTS.dawn;
+
+      const routeEl = document.getElementById('dock-route-summary');
+      if (routeEl) routeEl.textContent = `${AppState.origin} ⬅ ${AppState.destination} • ${AppState.distanceKm} كم`;
+
+      const terrainEl = document.getElementById('dock-terrain-badge');
+      if (terrainEl) {
+        terrainEl.textContent = AppState.terrain === 'rough' ? 'وعر (+200)' : AppState.terrain === 'sand' ? 'ردمية' : 'مزفلت';
+      }
+
+      const schedBtn = document.getElementById('dock-schedule-btn');
+      if (schedBtn) {
+        schedBtn.textContent = slotInfo.label;
+      }
+
+      const lowbedEl = document.getElementById('dock-matched-lowbed');
+      if (lowbedEl) lowbedEl.textContent = `اللوبد المطابق: ${equip.lowbed} (×${AppState.lowbedCountMultiplier})`;
+
+      const permitBadge = document.getElementById('dock-permit-badge');
+      if (permitBadge) {
+        if (equip.widthM && equip.widthM > 2.6) {
+          permitBadge.classList.remove('hidden');
+        } else {
+          permitBadge.classList.add('hidden');
+        }
+      }
+
+      const priceEl = document.getElementById('dock-total-price');
+      if (priceEl) priceEl.textContent = `${pricing.total.toLocaleString('ar-SA')} ر.س`;
+
+      const commEl = document.getElementById('dock-commission-hint');
+      if (commEl) {
+        commEl.textContent = AppState.isPilotZeroCommission
+          ? '(وضع التجربة: 0 ر.س سعي)'
+          : `(عربون التعميد شامل الضريبة: ${pricing.depositAmount} ر.س)`;
+      }
+
+      const brokenBtn = document.getElementById('dock-broken-btn');
+      if (brokenBtn) {
+        brokenBtn.className = AppState.isBrokenWinch
+          ? 'px-2 py-1.5 rounded-xl font-extrabold bg-amber-400 text-slate-950 border border-amber-300 shadow-sm'
+          : 'px-2 py-1.5 rounded-xl font-extrabold bg-slate-800 text-slate-200 border border-slate-700';
+      }
+
+      const backhaulBtn = document.getElementById('dock-backhaul-btn');
+      if (backhaulBtn) {
+        backhaulBtn.className = AppState.isBackhaul
+          ? 'px-2 py-1.5 rounded-xl font-extrabold bg-emerald-400 text-slate-950 border border-emerald-300 shadow-sm'
+          : 'px-2 py-1.5 rounded-xl font-extrabold bg-slate-800 text-emerald-300 border border-slate-700';
+      }
+
+      renderLiveOrderTracker();
+      renderEquipmentGrid();
+      renderClientDriverBids();
+      renderDriverView();
+      renderAdminDashboard();
+    }
+
+    function showToast(title, desc) {
+      const toast = document.getElementById('app-toast');
+      const titleEl = document.getElementById('toast-title');
+      const descEl = document.getElementById('toast-desc');
+      if (!toast || !titleEl || !descEl) return;
+      titleEl.textContent = title;
+      descEl.textContent = desc;
+      toast.classList.remove('hidden');
+      toast.classList.add('flex');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => {
+        toast.classList.add('hidden');
+        toast.classList.remove('flex');
+      }, 3200);
+    }
+
+    function initApp() {
+      try {
+        renderCatalogCategories();
+        renderFieldSitesQuickList();
+        syncAllViews();
+      } catch (err) {
+        const banner = document.getElementById('error-boundary-banner');
+        if (banner) {
+          banner.textContent = 'تنبيه تهيئة: ' + err.message;
+          banner.classList.remove('hidden');
+        }
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>
